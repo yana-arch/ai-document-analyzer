@@ -1,0 +1,5 @@
+{
+  "name": "AI Document Analyzer",
+  "description": "An intelligent web application that uses AI to analyze documents from a URL or file upload. It provides a summary, key topics, named entities, and an interactive Q&A chat interface to help users quickly extract insights from text-based content.",
+  "requestFramePermissions": []
+}
