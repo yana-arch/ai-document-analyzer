@@ -276,4 +276,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
+## 📝 Changelog
+
+All changes are documented in [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 Built with ❤️ using React, TypeScript, and Google Gemini AI

@@ -1,5 +1,6 @@
 {
-  "name": "AI Document Analyzer",
-  "description": "An intelligent web application that uses AI to analyze documents from a URL or file upload. It provides a summary, key topics, named entities, and an interactive Q&A chat interface to help users quickly extract insights from text-based content.",
+  "name": "AI Document Analyzer V2.0",
+  "description": "A cutting-edge document analysis application powered by Google Gemini AI with a ChatGPT-inspired modern interface. Features progressive loading, interactive Q&A with inline editing, smart quiz generation, and professional-grade UX with enhanced accessibility.",
+  "version": "2.0.0",
   "requestFramePermissions": []
 }
