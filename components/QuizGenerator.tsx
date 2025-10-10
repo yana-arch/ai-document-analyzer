@@ -125,6 +125,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText }) => {
             <option>3</option>
             <option>5</option>
             <option>10</option>
+            <option>30</option>
           </select>
         </div>
         <div>

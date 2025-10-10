@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult, HistoryItem } from './types';
 import { analyzeDocument } from './services/geminiService';
@@ -64,7 +65,11 @@ const App: React.FC = () => {
 
     } catch (err) {
       console.error("Processing failed:", err);
-      setError('error.unknown');
+      if (err instanceof Error && err.message.startsWith('error.')) {
+        setError(err.message);
+      } else {
+        setError('error.unknown');
+      }
     } finally {
       setIsLoading(false);
     }

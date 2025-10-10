@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -102,7 +103,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onProcess }) => {
                 id="file-upload"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 onChange={handleFileChange}
-                accept=".pdf,.txt,.docx,.doc,.md,.html"
+                accept=".txt,.md,.html"
             />
             <label htmlFor="file-upload" className="flex flex-col items-center justify-center space-y-2">
                 <UploadIcon className="w-10 h-10 text-zinc-400 dark:text-zinc-500 group-hover:text-indigo-500 transition-colors"/>

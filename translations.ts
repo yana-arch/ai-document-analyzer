@@ -1,3 +1,4 @@
+
 const translations = {
   en: {
     header: {
@@ -10,7 +11,12 @@ const translations = {
     error: {
       title: "Analysis Failed",
       tryAgain: "Try Again",
-      unknown: "An unknown error occurred during document processing. Please ensure your API key is configured correctly.",
+      unknown: "An unknown error occurred. Please check the console and ensure your API key is configured correctly.",
+      fileRead: "Failed to read the uploaded file. Please check the file and try again.",
+      fetchFailure: "Failed to fetch the URL. The network may be down, the URL invalid, or the site is blocking requests.",
+      contentRetrieval: "Could not retrieve content from the URL. It might be a private page or temporarily unavailable.",
+      textExtraction: "Could not extract meaningful text from the URL. The page might be empty, a non-text document, or rendered in a way that is difficult to parse.",
+      urlProcessing: "An error occurred while processing the URL. Please check the URL and try again."
     },
     uploader: {
       title: "Unlock Insights from Any Document",
@@ -20,7 +26,7 @@ const translations = {
       or: "OR",
       fileUpload: "Click to upload",
       dragAndDrop: "or drag and drop",
-      fileTypes: "PDF, TXT, DOCX, MD, HTML",
+      fileTypes: "Supported: .txt, .md, .html files",
     },
     dashboard: {
       analysisFor: "Analysis for:",
@@ -92,7 +98,12 @@ const translations = {
     error: {
       title: "Phân tích thất bại",
       tryAgain: "Thử lại",
-      unknown: "Đã xảy ra lỗi không xác định trong quá trình xử lý tài liệu. Vui lòng đảm bảo khóa API của bạn được định cấu hình chính xác.",
+      unknown: "Đã xảy ra lỗi không xác định. Vui lòng kiểm tra console và đảm bảo khóa API của bạn đúng.",
+      fileRead: "Không thể đọc tệp đã tải lên. Vui lòng kiểm tra lại tệp.",
+      fetchFailure: "Không thể truy xuất URL. Mạng có thể bị lỗi, URL không hợp lệ, hoặc trang web đang chặn yêu cầu.",
+      contentRetrieval: "Không thể lấy nội dung từ URL. Đây có thể là một trang riêng tư hoặc tạm thời không có sẵn.",
+      textExtraction: "Không thể trích xuất văn bản có ý nghĩa từ URL. Trang có thể trống, không phải tài liệu văn bản, hoặc được hiển thị theo cách khó phân tích.",
+      urlProcessing: "Đã xảy ra lỗi khi xử lý URL. Vui lòng kiểm tra lại URL."
     },
     uploader: {
       title: "Khám phá thông tin chi tiết từ mọi tài liệu",
@@ -102,7 +113,7 @@ const translations = {
       or: "HOẶC",
       fileUpload: "Nhấp để tải lên",
       dragAndDrop: "hoặc kéo và thả",
-      fileTypes: "PDF, TXT, DOCX, MD, HTML",
+      fileTypes: "Hỗ trợ các tệp: .txt, .md, .html",
     },
     dashboard: {
       analysisFor: "Phân tích cho:",
