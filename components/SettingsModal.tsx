@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserSettings, LanguageStyle, SummaryLength } from '../types';
+import { UserSettings, LanguageStyle, SummaryLength, APIConfiguration, AIProvider } from '../types';
+import { encryptApiKey, decryptApiKey, parseApiConfigurations, validateApiKey } from '../utils/apiKeyUtils';
+import { aiService } from '../services/aiService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -47,7 +49,142 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }));
   };
 
+  const updateAPIs = (apis: APIConfiguration[]) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      apis
+    }));
+  };
+
+  const handleSaveAPIConfig = (apiInput: string, provider: AIProvider, model?: string) => {
+    const apiKeys = parseApiConfigurations(apiInput);
+    if (apiKeys.length === 0) return;
+
+    // Validate at least one API key
+    const validKey = apiKeys.find(key => validateApiKey(provider, key));
+    if (!validKey) {
+      alert(`Invalid API key format for ${provider}`);
+      return;
+    }
+
+    // Encrypt all API keys
+    const encryptedKeys = apiKeys.map(key => {
+      try {
+        return encryptApiKey(key);
+      } catch (error) {
+        console.error('Failed to encrypt API key:', error);
+        return '';
+      }
+    }).filter(key => key.length > 0);
+
+    if (encryptedKeys.length === 0) {
+      alert('Failed to encrypt API keys');
+      return;
+    }
+
+    const newApi: APIConfiguration = {
+      id: `api-${Date.now()}`,
+      provider,
+      name: `${provider}${provider === 'openrouter' && model ? ` (${model})` : ''}`,
+      model,
+      apiKeys: encryptedKeys,
+      isActive: localSettings.apis.length === 0 // Make first API active
+    };
+
+    const updatedAPIs = [...localSettings.apis, newApi];
+    updateAPIs(updatedAPIs);
+  };
+
+  const handleSetActiveAPI = (apiId: string) => {
+    const updatedAPIs = localSettings.apis.map(api => ({
+      ...api,
+      isActive: api.id === apiId
+    }));
+    updateAPIs(updatedAPIs);
+  };
+
+  const handleDeleteAPI = (apiId: string) => {
+    const updatedAPIs = localSettings.apis.filter(api => api.id !== apiId);
+    updateAPIs(updatedAPIs);
+  };
+
   if (!isOpen) return null;
+
+  // API Input Form Component
+  const APIInputForm: React.FC<{ onSave: (apiInput: string, provider: AIProvider, model?: string) => void }> = ({ onSave }) => {
+    const [apiInput, setApiInput] = useState('');
+    const [selectedProvider, setSelectedProvider] = useState<AIProvider>('gemini');
+    const [model, setModel] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!apiInput.trim()) return;
+
+      const finalModel = selectedProvider === 'openrouter' ? (model.trim() || 'openai/gpt-4o-mini') : undefined;
+      onSave(apiInput.trim(), selectedProvider, finalModel);
+
+      // Reset form
+      setApiInput('');
+      setModel('');
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            Provider
+          </label>
+          <select
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value as AIProvider)}
+            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+        </div>
+
+        {selectedProvider === 'openrouter' && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              Model (Optional - defaults to gpt-4o-mini)
+            </label>
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="e.g., openai/gpt-4-turbo, anthropic/claude-3-sonnet"
+              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            API Keys
+          </label>
+          <textarea
+            value={apiInput}
+            onChange={(e) => setApiInput(e.target.value)}
+            placeholder={`Enter your API key(s)${selectedProvider === 'gemini' ? '\nFormat: AIzaSyXX...' : '\nFormat: sk-or-v1-XX...\n(can enter multiple keys separated by commas or new lines)'}`}
+            rows={4}
+            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none font-mono text-sm"
+          />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Your API keys are encrypted before storage. Multiple keys can be entered for failover support.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          disabled={!apiInput.trim()}
+          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:bg-zinc-400 disabled:cursor-not-allowed transition-colors"
+        >
+          Add API
+        </button>
+      </form>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -163,6 +300,77 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   rows={3}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* API Providers Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+              AI Providers
+            </h3>
+            <div className="space-y-6">
+              {/* Existing APIs */}
+              {localSettings.apis.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Configured APIs</h4>
+                  {localSettings.apis.map((api) => (
+                    <div
+                      key={api.id}
+                      className={`flex items-center justify-between p-4 rounded-lg border ${
+                        api.isActive
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 ring-2 ring-indigo-500'
+                          : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-600'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${
+                            api.provider === 'gemini' ? 'bg-blue-500' :
+                            api.provider === 'openrouter' ? 'bg-green-500' : 'bg-gray-500'
+                          }`}></div>
+                          <div>
+                            <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                              {api.name}
+                            </p>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                              {api.provider}{api.model ? ` • ${api.model}` : ''} • {api.apiKeys.length} key{api.apiKeys.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {!api.isActive && (
+                          <button
+                            onClick={() => handleSetActiveAPI(api.id)}
+                            className="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                          >
+                            Set Active
+                          </button>
+                        )}
+                        {api.isActive && (
+                          <span className="px-3 py-1 text-sm bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded">
+                            Active
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleDeleteAPI(api.id)}
+                          className="p-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add New API */}
+              <div className="border-t border-zinc-200 dark:border-zinc-600 pt-6">
+                <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">Add New API</h4>
+                <APIInputForm onSave={handleSaveAPIConfig} />
               </div>
             </div>
           </div>

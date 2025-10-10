@@ -57,10 +57,22 @@ export interface AISettings {
   aiPromptPrefix: string;
 }
 
+export type AIProvider = 'gemini' | 'openrouter';
+
+export interface APIConfiguration {
+  id: string;
+  provider: AIProvider;
+  name: string; // User-friendly display name
+  model?: string; // Model name (optional for Gemini, required for OpenRouter)
+  apiKeys: string[]; // Array of encrypted API keys
+  isActive: boolean; // Currently selected
+}
+
 export interface UserSettings {
   ai: AISettings;
   ui: {
     enableDarkMode: boolean;
     autoSave: boolean;
   };
+  apis: APIConfiguration[];
 }

@@ -25,12 +25,15 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
   ));
 
   const MemoizedSummaryPanel = memo(() => <SummaryPanel summary={analysis.summary} />);
-  const MemoizedQnAChat = memo(() => <QnAChat documentText={documentText} fileName={fileName} />);
-  const MemoizedQuizGenerator = memo(() => <QuizGenerator
-    documentText={documentText}
-    defaultMCQuestions={settings.ai.quizDefaultMCQuestions}
-    defaultWrittenQuestions={settings.ai.quizDefaultWrittenQuestions}
-  />);
+  const MemoizedQnAChat = memo(() => <QnAChat documentText={documentText} fileName={fileName} settings={settings} />);
+  const MemoizedQuizGenerator = memo(() =>
+    <QuizGenerator
+      documentText={documentText}
+      settings={settings}
+      defaultMCQuestions={settings.ai.quizDefaultMCQuestions}
+      defaultWrittenQuestions={settings.ai.quizDefaultWrittenQuestions}
+    />
+  );
   const MemoizedTopicsCloud = memo(() => <TopicsCloud topics={analysis.topics} />);
   const MemoizedEntityExtractor = memo(() => <EntityExtractor entities={analysis.entities} sentiment={analysis.sentiment} />);
 

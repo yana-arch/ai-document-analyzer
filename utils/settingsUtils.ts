@@ -16,6 +16,7 @@ export const defaultSettings: UserSettings = {
     enableDarkMode: false,
     autoSave: true,
   },
+  apis: [], // Will be populated with default configurations when first created
 };
 
 // Load settings from localStorage
@@ -28,6 +29,7 @@ export function loadSettings(): UserSettings {
       return {
         ai: { ...defaultSettings.ai, ...parsedSettings.ai },
         ui: { ...defaultSettings.ui, ...parsedSettings.ui },
+        apis: parsedSettings.apis || defaultSettings.apis,
       };
     }
   } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { createChat } from '../services/geminiService';
-import { ChatMessage } from '../types';
+import { aiService } from '../services/aiService';
+import { ChatMessage, UserSettings } from '../types';
 import Card from './shared/Card';
 import { Chat } from '@google/genai';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,6 +9,7 @@ import { createMarkdownHtml } from '../utils/markdownUtils';
 interface QnAChatProps {
   documentText: string;
   fileName: string;
+  settings: UserSettings;
 }
 
 const SendIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -20,18 +21,27 @@ const RefreshIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName }) => {
+const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const chatRef = useRef<Chat | null>(null);
+  const chatRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const { t, locale } = useLanguage();
 
   useEffect(() => {
     // Initialize chat and load history when the document (identified by fileName) changes.
-    chatRef.current = createChat(documentText, locale);
-    
+    const initChat = async () => {
+      try {
+        chatRef.current = await aiService.createChat(documentText, locale, settings);
+      } catch (error) {
+        console.error("Failed to initialize chat:", error);
+        chatRef.current = null;
+      }
+    };
+
+    initChat();
+
     if (fileName) {
         try {
             const savedHistory = localStorage.getItem(`ai-doc-analyzer-chat_${fileName}`);
@@ -48,7 +58,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName }) => {
     }
 
     setMessages([{ role: 'model', text: t('chat.initialMessage') }]);
-  }, [documentText, fileName, locale, t]);
+  }, [documentText, fileName, locale, settings, t]);
 
   useEffect(() => {
     // Save history to localStorage whenever messages change, if there's a conversation.
@@ -66,9 +76,14 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleClearChat = useCallback(() => {
+  const handleClearChat = useCallback(async () => {
     setMessages([{ role: 'model', text: t('chat.initialMessage') }]);
-    chatRef.current = createChat(documentText, locale);
+    try {
+      chatRef.current = await aiService.createChat(documentText, locale, settings);
+    } catch (error) {
+      console.error("Failed to reinitialize chat:", error);
+      chatRef.current = null;
+    }
     if (fileName) {
       try {
         localStorage.removeItem(`ai-doc-analyzer-chat_${fileName}`);
@@ -76,7 +91,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName }) => {
         console.error("Failed to remove chat history from storage:", error);
       }
     }
-  }, [documentText, fileName, locale, t]);
+  }, [documentText, fileName, locale, settings, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

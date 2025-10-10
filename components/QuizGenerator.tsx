@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion } from '../types';
-import { generateQuiz, gradeWrittenAnswer } from '../services/geminiService';
+import { QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, UserSettings } from '../types';
+import { aiService } from '../services/aiService';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface QuizGeneratorProps {
   documentText: string;
+  settings: UserSettings;
   defaultMCQuestions?: number;
   defaultWrittenQuestions?: number;
 }
 
-const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, defaultMCQuestions = 5, defaultWrittenQuestions = 0 }) => {
+const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, defaultMCQuestions = 5, defaultWrittenQuestions = 0 }) => {
   const [quizState, setQuizState] = useState<'idle' | 'generating' | 'taking' | 'grading' | 'finished'>('idle');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -35,7 +36,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, defaultMCQu
     setQuizState('generating');
     setError(null);
     try {
-      const generatedQuestions = await generateQuiz(documentText, locale, mcCount, writtenCount);
+      const generatedQuestions = await aiService.generateQuiz(documentText, locale, settings, mcCount, writtenCount);
       if (generatedQuestions && generatedQuestions.length > 0) {
         // Simple shuffle
         generatedQuestions.sort(() => Math.random() - 0.5);
@@ -84,7 +85,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, defaultMCQu
     if (writtenQuestionsToGrade.length > 0) {
         const gradingPromises = writtenQuestionsToGrade.map(q => {
             const userAnswer = writtenAnswers[q.originalIndex] || "";
-            return gradeWrittenAnswer(documentText, q.question, userAnswer, locale);
+            return aiService.gradeWrittenAnswer(documentText, q.question, userAnswer, locale, settings);
         });
 
         const results = await Promise.all(gradingPromises);

@@ -1,7 +1,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings } from './types';
-import { analyzeDocument } from './services/geminiService';
 import { extractTextFromSource } from './services/documentProcessor';
 import DocumentUploader from './components/DocumentUploader';
 import AnalysisDashboard from './components/AnalysisDashboard';
@@ -10,6 +9,7 @@ import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
 import { useLanguage } from './contexts/LanguageContext';
 import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
+import { aiService } from './services/aiService';
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
@@ -47,8 +47,7 @@ const App: React.FC = () => {
       const text = await extractTextFromSource(source);
       setDocumentText(text);
 
-      const aiSettings = getAISettings(settings);
-      const result = await analyzeDocument(text, { ai: aiSettings, ui: settings.ui });
+      const result = await aiService.analyzeDocument(text, settings);
       setAnalysisResult(result);
       
       const newHistoryItem: HistoryItem = {
@@ -108,7 +107,14 @@ const App: React.FC = () => {
   const handleSaveSettings = useCallback((newSettings: UserSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
+    // Update AI service providers when settings change
+    aiService.updateProviders(newSettings.apis);
   }, []);
+
+  // Initialize AI service providers when component mounts
+  useEffect(() => {
+    aiService.updateProviders(settings.apis);
+  }, [settings.apis]);
   
   const ErrorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
