@@ -162,7 +162,11 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, defaultMCQu
       <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
         {t('quiz.question')} {currentQuestionIndex + 1} {t('quiz.of')} {questions.length}
       </div>
-      <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 mb-6">{currentQuestion.question}</h4>
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500 mb-6">
+        <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 leading-relaxed">
+          {currentQuestion.question}
+        </h4>
+      </div>
       
       {currentQuestion.type === 'multiple-choice' ? (
         <div className="space-y-3">

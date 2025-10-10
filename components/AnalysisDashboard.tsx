@@ -58,8 +58,53 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
         </div>
       </div>
        <Card title={t('dashboard.fullDocumentText')}>
-          <div className="prose prose-zinc dark:prose-invert max-w-none h-96 overflow-y-auto p-4 bg-zinc-100 dark:bg-zinc-900 rounded-lg ring-1 ring-inset ring-zinc-200 dark:ring-zinc-700">
-            <pre className="whitespace-pre-wrap font-mono text-sm">{documentText}</pre>
+          <div className="h-96 overflow-y-auto">
+            <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">
+              {/* Document statistics */}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-100 dark:border-zinc-700">
+                <div className="flex items-center space-x-6 text-sm text-zinc-600 dark:text-zinc-400">
+                  <span>📄 {Math.round(documentText.length / 1000)}k characters</span>
+                  <span>📝 {documentText.split(/\s+/).length} words</span>
+                  <span>🧾 {documentText.split(/\n\n|\n\r|\r/).length} paragraphs</span>
+                </div>
+              </div>
+
+              {/* Document content with enhanced typography */}
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <div className="leading-relaxed text-zinc-800 dark:text-zinc-100">
+                  {documentText.split('\n').map((paragraph, index) => {
+                    const trimmed = paragraph.trim();
+                    if (!trimmed) return null;
+
+                    // Detect if it looks like a heading (starts with # or is short and ends with colon)
+                    const isHeading = trimmed.startsWith('#') ||
+                      (trimmed.length < 50 && trimmed.endsWith(':') && !trimmed.includes('.'));
+
+                    // Detect bullet points
+                    const isBulletPoint = trimmed.startsWith('- ') || trimmed.startsWith('* ') ||
+                      trimmed.match(/^\d+\./);
+
+                    return (
+                      <div key={index} className={`${index > 0 ? 'mt-4' : ''}`}>
+                        {isHeading ? (
+                          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 mt-6 first:mt-0">
+                            {trimmed.replace(/^#+\s*/, '').replace(/:$/, '')}
+                          </h3>
+                        ) : isBulletPoint ? (
+                          <div className="ml-4 text-sm leading-6">
+                            {trimmed}
+                          </div>
+                        ) : (
+                          <p className="text-base leading-7">
+                            {trimmed}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
     </div>

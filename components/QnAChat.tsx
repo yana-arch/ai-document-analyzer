@@ -4,6 +4,7 @@ import { ChatMessage } from '../types';
 import Card from './shared/Card';
 import { Chat } from '@google/genai';
 import { useLanguage } from '../contexts/LanguageContext';
+import { createMarkdownHtml } from '../utils/markdownUtils';
 
 interface QnAChatProps {
   documentText: string;
@@ -125,7 +126,14 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName }) => {
                   ? 'bg-indigo-600 text-white rounded-br-none'
                   : 'bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm rounded-bl-none'
               }`}>
-                <p className="text-sm leading-relaxed">{msg.text}</p>
+                {msg.role === 'model' ? (
+                  <div
+                    className="text-sm leading-relaxed prose prose-zinc dark:prose-invert max-w-none prose-sm"
+                    dangerouslySetInnerHTML={createMarkdownHtml(msg.text)}
+                  />
+                ) : (
+                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                )}
               </div>
             </div>
           ))}
