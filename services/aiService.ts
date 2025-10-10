@@ -40,16 +40,18 @@ class AIService {
     const activeApi = settings.apis.find(api => api.isActive);
 
     if (!activeApi) {
-      // Fallback to old Gemini environment variable if no APIs configured
-      const fallbackKey = import.meta.env.VITE_API_KEY;
-      if (fallbackKey) {
-        console.warn('No active API configured, falling back to environment variable');
-        try {
-          this.providers.set('fallback-gemini', new GeminiProvider(fallbackKey));
-          return this.providers.get('fallback-gemini') || null;
-        } catch (error) {
-          console.error('Fallback Gemini failed:', error);
-          return null;
+      // Fallback to old Gemini environment variable if no APIs configured and fallback is enabled
+      if (settings.ui.enableDefaultGemini) {
+        const fallbackKey = import.meta.env.VITE_API_KEY;
+        if (fallbackKey) {
+          console.warn('No active API configured, falling back to default Gemini API');
+          try {
+            this.providers.set('fallback-gemini', new GeminiProvider(fallbackKey));
+            return this.providers.get('fallback-gemini') || null;
+          } catch (error) {
+            console.error('Fallback Gemini failed:', error);
+            return null;
+          }
         }
       }
       return null;

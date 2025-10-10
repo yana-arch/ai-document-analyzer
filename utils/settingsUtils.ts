@@ -15,6 +15,7 @@ export const defaultSettings: UserSettings = {
   ui: {
     enableDarkMode: false,
     autoSave: true,
+    enableDefaultGemini: true,
   },
   apis: [], // Will be populated with default configurations when first created
 };

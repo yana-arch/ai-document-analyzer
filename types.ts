@@ -73,6 +73,7 @@ export interface UserSettings {
   ui: {
     enableDarkMode: boolean;
     autoSave: boolean;
+    enableDefaultGemini: boolean;
   };
   apis: APIConfiguration[];
 }
