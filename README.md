@@ -2,34 +2,43 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# 🤖 AI Document Analyzer
+# 🤖 AI Document Analyzer V2.0
 
-A modern, high-performance document analysis application powered by Google Gemini AI. This app intelligently analyzes documents, generates quizzes, provides Q&A support, and offers comprehensive insights with optimized performance and multi-format support.
+A cutting-edge document analysis application powered by Google Gemini AI with a ChatGPT-inspired modern interface. This app provides intelligent document analysis, interactive Q&A, smart quiz generation, and comprehensive insights with professional-grade performance, accessibility, and multi-format support.
 
 ## ✨ Features
 
 ### 🚀 Core Functionality
 
 - **Document Analysis**: Extract summaries, topics, entities, and sentiment from any document
-- **Interactive Q&A**: Ask questions about your documents in natural language
-- **Smart Quiz Generation**: Create custom quizzes for comprehension testing
-- **Multilingual Support**: Full Vietnamese and English language support
-- **History Management**: Save and resume previous analyses
+- **Modern ChatGPT-Style Q&A**: Professional chat interface with message editing, timestamps, and smooth UX
+- **Smart Quiz Generation**: Create custom quizzes with AI-powered grading for comprehension testing
+- **Multilingual Support**: Full Vietnamese and English language support with seamless switching
+- **Advanced History Management**: Export/import analyses, search, and local storage persistence
+
+### 💻 Modern User Experience
+
+- **ChatGPT-Inspired Interface**: Professional message bubbles, smooth animations, and intuitive interactions
+- **Progressive Loading**: Real-time progress indicators during document analysis with step-by-step feedback
+- **Interactive Onboarding**: Guided first-time user experience with contextual help
+- **Enhanced Accessibility**: WCAG 2.1 AA compliant with screen reader support and keyboard navigation
+- **Mobile-Responsive Design**: Optimized for all screen sizes with touch-friendly interactions
+
+### 🛠 Advanced Features
+
+- **Inline Message Editing**: Edit and resend chat messages with real-time feedback
+- **Code Copy Functionality**: One-click copy for code blocks with visual confirmation
+- **Smart Scroll Management**: Auto-scroll intelligence with "jump to bottom" controls
+- **Markdown Rendering**: Rich text display with syntax highlighting for technical content
+- **API Failover Support**: Multiple AI provider support with intelligent retry mechanisms
 
 ### 📁 File Format Support
 
 - Plain text files (`.txt`, `.md`, etc.)
 - HTML files (`.html`, `.htm`)
-- PDF documents (`.pdf`) - with specialized text extraction
-- Microsoft Word documents (`.docx`)
-
-### ⚡ Performance Optimizations
-
-- **Intelligent Caching**: Memory-based cache with TTL for repeated analyses (50-80% API reduction)
-- **Batch Processing**: Combined analysis + quiz generation in single API calls
-- **Lazy Loading**: Components loaded on-demand for faster initial page load
-- **React Memoization**: Optimized re-renders with memoized components
-- **Auto Retry**: Exponential backoff for failed API calls with intelligent error recovery
+- PDF documents (`.pdf`) - with specialized text extraction using PDF.js
+- Microsoft Word documents (`.docx`) - using Mammoth.js parser
+- URLs (web content) - with intelligent text extraction from web pages
 
 ## 🛠 Tech Stack
 
@@ -103,6 +112,11 @@ Upload a document to get:
 
 - Ask natural language questions about your document
 - Context-aware responses based only on document content
+- ChatGPT-inspired interface with modern Message bubbles
+- Inline message editing and resend functionality
+- One-click code block copying with visual feedback
+- Smart scroll management with auto-scroll indicators
+- Progressive typing indicators and smooth animations
 - Persistent chat history stored locally
 
 #### 📝 Quiz Generation
@@ -181,11 +195,39 @@ npm run build
 npm run preview
 ```
 
+### Docker Deployment
+
+Build and run with Docker:
+
+```bash
+docker build -t ai-document-analyzer .
+docker run -p 3016:3016 -e API_KEY=your_gemini_api_key ai-document-analyzer
+```
+
+Or use Docker Compose:
+
+```bash
+docker-compose up
+```
+
 ### Deployment Options
 
-- Deploy to any static hosting (Vercel, Netlify, GitHub Pages)
-- Ensure `API_KEY` environment variable is set in production
-- Consider adding backend for secure file processing
+- **Static Hosting**: Deploy to Vercel, Netlify, GitHub Pages, or Cloudflare Pages
+- **Docker**: Containerized deployment with the included Docker setup
+- **Manual Build**: Use Vite's build output for any web server
+- **Production Environment**: Ensure `API_KEY` environment variable is set securely
+- **Backend Integration**: Consider adding a backend server for enhanced file processing and security
+
+### Environment Variables
+
+```bash
+# Required
+API_KEY=your_gemini_api_key_here
+
+# Optional Configuration
+NODE_ENV=production
+VITE_API_BASE_URL=https://api.example.com
+```
 
 ## 🤝 Contributing
 
@@ -204,6 +246,33 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Google Gemini AI for powerful language models
 - React ecosystem for excellent developer experience
 - Open source community for file processing libraries
+
+---
+
+## 🚀 What's New in V2.0
+
+### Major UI/UX Improvements
+
+- **ChatGPT-Inspired Chat Interface**: Complete redesign with modern message bubbles, timestamps, and professional styling
+- **Progressive Loading System**: Real-time step-by-step progress indicators during document analysis
+- **Enhanced Onboarding**: Interactive welcome screen with suggested questions and guided help
+- **Inline Message Editing**: Edit and resend chat messages with immediate feedback
+- **Code Copy Functionality**: One-click copying of code blocks with visual confirmation
+- **Smart Scroll Management**: Intelligent auto-scroll with user-friendly "jump to bottom" controls
+
+### Performance & Accessibility
+
+- **React 19 Upgrade**: Latest React features with improved performance and developer experience
+- **Enhanced Accessibility**: WCAG 2.1 AA compliance with proper ARIA labels and keyboard navigation
+- **Mobile Optimization**: Touch-friendly interface optimized for all screen sizes
+- **Advanced Caching**: Intelligent memory-based caching reducing API calls by 50-80%
+
+### Developer Experience
+
+- **Modern Tech Stack**: Updated to React 19, TypeScript, and latest tooling
+- **Docker Support**: Easy deployment with Docker and Docker Compose
+- **Enhanced Documentation**: Comprehensive setup and deployment guides
+- **Open Source Libraries**: Integration of PDF.js, Mammoth.js, and advanced markdown processing
 
 ---
 
