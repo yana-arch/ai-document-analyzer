@@ -5,7 +5,7 @@ const md = new MarkdownIt({
   html: false, // Don't allow HTML in markdown for security
   linkify: true,
   typographer: true,
-  breaks: true, // Convert \n to <br>
+  breaks: false, // Dont convert \n to <br>
 });
 
 // Custom renderer for better styling

@@ -145,7 +145,11 @@ export class GeminiProvider extends BaseAIProvider {
     const chat = this.ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
-        systemInstruction: `You are an AI assistant. ${languageInstruction} If you cannot find information, say: "${notFoundMessage}". 
+        systemInstruction: `${languageInstruction}
+
+You are an AI assistant. You must answer questions based only on the content of the following document.
+
+If the question cannot be answered using the document, say: "${notFoundMessage}"
 
 Document: ${documentText}`,
       }
