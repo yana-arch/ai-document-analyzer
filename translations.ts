@@ -21,6 +21,12 @@ const translations = {
     uploader: {
       title: "Unlock Insights from Any Document",
       subtitle: "Upload a file or enter a public URL to get an AI-powered summary, key topics, and an interactive Q&A session.",
+      getStarted: "Get Started in 4 Steps",
+      instructions: "Here's how to analyze your first document:",
+      step1: "Configure your AI provider in Settings → API Keys",
+      step2: "Upload a document or enter a public URL below",
+      step3: "Wait for AI analysis to complete",
+      step4: "Explore summary, chat, and quiz features",
       urlPlaceholder: "Enter a public URL (e.g., https://...)",
       urlButton: "Analyze URL",
       or: "OR",
@@ -50,6 +56,7 @@ const translations = {
       initialMessage: "Hello! Ask me anything about the document.",
       errorMessage: "Sorry, I encountered an error. Please try again.",
       placeholder: "Ask a follow-up question...",
+      sendMessage: "Send message",
     },
     quiz: {
       title: "Knowledge Check",
@@ -135,6 +142,12 @@ const translations = {
     uploader: {
       title: "Khám phá thông tin chi tiết từ mọi tài liệu",
       subtitle: "Tải lên một tệp hoặc nhập URL công khai để nhận bản tóm tắt, các chủ đề chính và phiên Hỏi & Đáp tương tác do AI cung cấp.",
+      getStarted: "Bắt đầu trong 4 bước",
+      instructions: "Đây là cách phân tích tài liệu đầu tiên của bạn:",
+      step1: "Cấu hình nhà cung cấp AI của bạn trong Cài đặt → Khóa API",
+      step2: "Tải lên một tài liệu hoặc nhập URL công khai bên dưới",
+      step3: "Chờ quá trình phân tích AI hoàn thành",
+      step4: "Khám phá tóm tắt, chat và tính năng kiểm tra kiến thức",
       urlPlaceholder: "Nhập URL công khai (ví dụ: https://...)",
       urlButton: "Phân tích URL",
       or: "HOẶC",
@@ -164,6 +177,7 @@ const translations = {
       initialMessage: "Xin chào! Hãy hỏi tôi bất cứ điều gì về tài liệu này.",
       errorMessage: "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.",
       placeholder: "Đặt câu hỏi tiếp theo...",
+      sendMessage: "Gửi tin nhắn",
     },
     quiz: {
       title: "Kiểm tra kiến thức",

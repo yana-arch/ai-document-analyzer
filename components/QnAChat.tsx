@@ -247,15 +247,17 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
-              className="flex-grow w-full px-4 py-2.5 bg-zinc-100 dark:bg-zinc-700 border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 focus:bg-white dark:focus:bg-zinc-800 transition-colors"
+              className="flex-grow w-full px-4 py-2.5 bg-zinc-100 dark:bg-zinc-700/50 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 focus:bg-white dark:focus:bg-zinc-800 transition-all duration-200 hover:shadow-md"
               disabled={isLoading}
+              aria-describedby="chat-input-help"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="p-2.5 text-white bg-indigo-600 rounded-full hover:bg-indigo-700 disabled:bg-zinc-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-colors shrink-0"
+              className="p-2.5 text-white bg-indigo-600 rounded-full hover:bg-indigo-700 focus:bg-indigo-700 disabled:bg-zinc-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all duration-200 shrink-0 disabled:hover:scale-100 hover:scale-105 active:scale-95"
+              aria-label={t('chat.sendMessage')}
             >
-              <SendIcon className="w-5 h-5"/>
+              <SendIcon className="w-5 h-5" aria-hidden="true" />
             </button>
           </form>
         </div>

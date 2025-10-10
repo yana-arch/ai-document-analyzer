@@ -65,6 +65,34 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onProcess }) => {
         {t('uploader.subtitle')}
       </p>
 
+      {/* Enhanced onboarding for first-time users */}
+      <div className="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-6 rounded-xl border border-indigo-200 dark:border-indigo-800">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+          {t('uploader.getStarted')}
+        </h3>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+          {t('uploader.instructions')}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="flex items-start space-x-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 shrink-0"></div>
+            <span className="text-zinc-700 dark:text-zinc-300">{t('uploader.step1')}</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 shrink-0"></div>
+            <span className="text-zinc-700 dark:text-zinc-300">{t('uploader.step2')}</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 shrink-0"></div>
+            <span className="text-zinc-700 dark:text-zinc-300">{t('uploader.step3')}</span>
+          </div>
+          <div className="flex items-start space-x-2">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 shrink-0"></div>
+            <span className="text-zinc-700 dark:text-zinc-300">{t('uploader.step4')}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-12 bg-white dark:bg-zinc-800/50 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50">
         <form onSubmit={handleUrlSubmit} className="flex flex-col sm:flex-row gap-4">
           <input

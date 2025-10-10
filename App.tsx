@@ -4,7 +4,7 @@ import { AnalysisResult, HistoryItem, UserSettings } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
 import DocumentUploader from './components/DocumentUploader';
 import AnalysisDashboard from './components/AnalysisDashboard';
-import Loader from './components/shared/Loader';
+import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
 import { useLanguage } from './contexts/LanguageContext';
@@ -22,6 +22,14 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([
+    { label: 'Extracting document text...', status: 'waiting' },
+    { label: 'Analyzing content with AI...', status: 'waiting' },
+    { label: 'Generating summary...', status: 'waiting' },
+    { label: 'Extracting topics...', status: 'waiting' },
+    { label: 'Analyzing entities and sentiment...', status: 'waiting' },
+    { label: 'Saving results...', status: 'waiting' },
+  ]);
   const { t, locale, setLocale } = useLanguage();
 
   useEffect(() => {
@@ -36,6 +44,16 @@ const App: React.FC = () => {
   }, []);
 
   const handleDocumentProcess = useCallback(async (source: File | string) => {
+    // Reset analysis steps
+    setAnalysisSteps([
+      { label: 'Extracting document text...', status: 'waiting' },
+      { label: 'Analyzing content with AI...', status: 'waiting' },
+      { label: 'Generating summary...', status: 'waiting' },
+      { label: 'Extracting topics...', status: 'waiting' },
+      { label: 'Analyzing entities and sentiment...', status: 'waiting' },
+      { label: 'Saving results...', status: 'waiting' },
+    ]);
+
     setIsLoading(true);
     setError(null);
     setAnalysisResult(null);
@@ -44,12 +62,33 @@ const App: React.FC = () => {
     setFileName(currentFileName);
 
     try {
+      // Step 1: Extract document text
+      setAnalysisSteps(prev => prev.map((step, idx) =>
+        idx === 0 ? { ...step, status: 'in-progress' as const } : step
+      ));
+
       const text = await extractTextFromSource(source);
       setDocumentText(text);
 
+      setAnalysisSteps(prev => prev.map((step, idx) =>
+        idx === 0 ? { ...step, status: 'completed' as const } :
+        idx === 1 ? { ...step, status: 'in-progress' as const } : step
+      ));
+
+      // Step 2-5: AI analysis (we'll mark these as completed together for now)
       const result = await aiService.analyzeDocument(text, settings);
       setAnalysisResult(result);
-      
+
+      setAnalysisSteps(prev => prev.map((step, idx) => ({
+        ...step,
+        status: idx >= 1 && idx <= 4 ? 'completed' as const : step.status
+      })));
+
+      // Step 6: Save results
+      setAnalysisSteps(prev => prev.map((step, idx) =>
+        idx === 5 ? { ...step, status: 'in-progress' as const } : step
+      ));
+
       const newHistoryItem: HistoryItem = {
         fileName: currentFileName,
         analysis: result,
@@ -67,8 +106,14 @@ const App: React.FC = () => {
         return updatedHistory;
       });
 
+      setAnalysisSteps(prev => prev.map((step, idx) =>
+        idx === 5 ? { ...step, status: 'completed' as const } : step
+      ));
+
     } catch (err) {
       console.error("Processing failed:", err);
+      // Mark all steps as error if anything fails
+      setAnalysisSteps(prev => prev.map(step => ({ ...step, status: 'error' as const })));
       if (err instanceof Error && err.message.startsWith('error.')) {
         setError(err.message);
       } else {
@@ -77,7 +122,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [settings.apis, settings.ui]);
   
   const handleLoadHistory = (item: HistoryItem) => {
     setAnalysisResult(item.analysis);
@@ -181,8 +226,11 @@ const App: React.FC = () => {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
-            <Loader />
-            <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">{t('loader.analyzing')}</p>
+            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
+              <Loader size="lg" />
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
+              <ProgressIndicator steps={analysisSteps} currentStep={0} />
+            </div>
           </div>
         ) : error ? (
            <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">

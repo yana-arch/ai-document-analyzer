@@ -40,12 +40,14 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
   return (
     <div className="space-y-6">
        <div className="bg-white dark:bg-zinc-800/50 p-4 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-700/50 flex items-center">
-        <DocumentIcon className="w-6 h-6 text-indigo-500 mr-3 shrink-0"/>
+        <DocumentIcon className="w-6 h-6 text-indigo-500 mr-3 shrink-0" aria-hidden="true" />
         <h2 className="text-xl font-semibold text-zinc-800 dark:text-zinc-100 truncate" title={fileName}>
           {t('dashboard.analysisFor')} <span className="font-bold">{fileName}</span>
         </h2>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      {/* Responsive grid: stacked on small screens, side-by-side on larger screens */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <MemoizedSummaryPanel />
           <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Chat...</span></div>}>
