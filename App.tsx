@@ -83,6 +83,15 @@ const App: React.FC = () => {
     setIsLoading(false);
   };
 
+  const handleImportHistory = (mergedHistory: HistoryItem[]) => {
+    setHistory(mergedHistory);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(mergedHistory));
+    } catch (err) {
+      console.error("Failed to save imported history to localStorage", err);
+    }
+  };
+
   const handleReset = () => {
     setDocumentText(null);
     setAnalysisResult(null);
@@ -174,7 +183,7 @@ const App: React.FC = () => {
         ) : (
           <>
             <DocumentUploader onProcess={handleDocumentProcess} />
-            <HistoryList items={history} onLoadItem={handleLoadHistory} />
+            <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
           </>
         )}
       </main>

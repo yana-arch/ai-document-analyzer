@@ -1,14 +1,51 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { HistoryItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { exportHistory, importHistory, mergeHistory } from '../utils/historyUtils';
 
 interface HistoryListProps {
   items: HistoryItem[];
   onLoadItem: (item: HistoryItem) => void;
+  onImportHistory: (mergedHistory: HistoryItem[]) => void;
 }
 
-const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem }) => {
+const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHistory }) => {
   const { t } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportHistory = useCallback(async () => {
+    try {
+      await exportHistory(items);
+      alert(t('history.exportSuccess'));
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert(t('history.importError'));
+    }
+  }, [items, t]);
+
+  const handleImportTrigger = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImportHistory = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const importedHistory = await importHistory(file);
+      const mergedHistory = mergeHistory(items, importedHistory);
+      onImportHistory(mergedHistory);
+      alert(t('history.importSuccess'));
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert(t('history.importError'));
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [items, onImportHistory, t]);
 
   if (items.length === 0) {
     return null;
@@ -21,6 +58,42 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem }) => {
   return (
     <div className="max-w-4xl mx-auto mt-16">
       <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-6 text-center">{t('history.title')}</h3>
+
+      <div className="flex justify-center gap-4 mb-6">
+        <button
+          onClick={handleExportHistory}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2"
+          disabled={items.length === 0}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          {t('history.exportButton')}
+        </button>
+
+        <button
+          onClick={handleImportTrigger}
+          className="px-4 py-2 bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 transition-colors flex items-center gap-2"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17,8 12,3 7,8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          {t('history.importButton')}
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleImportHistory}
+          className="hidden"
+        />
+      </div>
+
       <div className="bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50 p-6 space-y-4">
         {items.map((item) => (
           <button

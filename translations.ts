@@ -1,4 +1,3 @@
-
 const translations = {
   en: {
     header: {
@@ -85,6 +84,12 @@ const translations = {
     history: {
       title: "Previously Analyzed",
       analyzedOn: "Analyzed on:",
+      exportButton: "Export History",
+      importButton: "Import History",
+      exportSuccess: "History exported successfully",
+      importSuccess: "History imported and merged successfully",
+      importError: "Failed to import history. Invalid file format.",
+      importFileType: "Please select a valid history JSON file",
     }
   },
   vi: {
@@ -172,6 +177,12 @@ const translations = {
     history: {
       title: "Đã phân tích trước đây",
       analyzedOn: "Phân tích vào:",
+      exportButton: "Xuất Lịch sử",
+      importButton: "Nhập Lịch sử",
+      exportSuccess: "Xuất lịch sử thành công",
+      importSuccess: "Nhập và gộp lịch sử thành công",
+      importError: "Không thể nhập lịch sử. Định dạng tệp không hợp lệ.",
+      importFileType: "Vui lòng chọn tệp JSON lịch sử hợp lệ",
     }
   }
 };
