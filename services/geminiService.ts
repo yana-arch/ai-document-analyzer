@@ -1,5 +1,34 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
 import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion } from '../types';
+import { cacheService } from './cacheService';
+
+// Retry utility with exponential backoff
+const retryWithBackoff = async <T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> => {
+  let lastError: Error;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt === maxRetries) {
+        break; // Last attempt failed
+      }
+
+      // Exponential backoff with jitter
+      const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+      console.warn(`Attempt ${attempt + 1} failed, retrying in ${Math.round(delay)}ms:`, error);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError!;
+};
 
 if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable not set. Please add `API_KEY=YOUR_API_KEY` to the 'Run test' secret environments.");
@@ -40,6 +69,14 @@ const analysisSchema = {
 };
 
 export async function analyzeDocument(text: string): Promise<AnalysisResult> {
+  // Check cache first
+  const cacheKey = cacheService.generateKey(text, 'analysis');
+  const cachedResult = cacheService.get(cacheKey);
+  if (cachedResult) {
+    console.log('Using cached analysis result');
+    return cachedResult as AnalysisResult;
+  }
+
   const prompt = `Analyze the following document and provide the results in a JSON object. The analysis should be in English.
 
 Document:
@@ -49,20 +86,27 @@ ${text}
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: analysisSchema,
-      }
+    const result = await retryWithBackoff(async () => {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: analysisSchema,
+        }
+      });
+
+      const jsonString = response.text.trim();
+      return JSON.parse(jsonString) as AnalysisResult;
     });
 
-    const jsonString = response.text.trim();
-    return JSON.parse(jsonString) as AnalysisResult;
+    // Cache the result for 1 hour (3600 seconds)
+    cacheService.set(cacheKey, result, 3600);
+
+    return result;
 
   } catch (error) {
-    console.error("Gemini API call failed:", error);
+    console.error("Gemini API call failed after retries:", error);
     throw new Error("Failed to analyze document with the AI model. Check the console for more details.");
   }
 }
@@ -137,8 +181,26 @@ const quizSchema = {
     required: ["multipleChoiceQuestions", "writtenQuestions"]
 };
 
+// Combined schema for batch analysis and quiz generation
+const analysisWithQuizSchema = {
+    type: Type.OBJECT,
+    properties: {
+        analysis: analysisSchema,
+        quiz: quizSchema
+    },
+    required: ["analysis", "quiz"]
+};
+
 
 export async function generateQuiz(text: string, locale: 'en' | 'vi', mcCount: number, writtenCount: number): Promise<QuizQuestion[]> {
+  // Check cache first with locale and question counts
+  const cacheKey = cacheService.generateKey(text, 'quiz', { locale, mcCount, writtenCount });
+  const cachedResult = cacheService.get(cacheKey);
+  if (cachedResult) {
+    console.log('Using cached quiz result');
+    return cachedResult as QuizQuestion[];
+  }
+
   const languageInstruction = locale === 'vi' ? 'The quiz questions, options, and explanations must be in Vietnamese.' : 'The quiz questions, options, and explanations must be in English.';
 
   const prompt = `Based on the following document, generate a comprehensive quiz to test a user's comprehension.
@@ -163,11 +225,16 @@ ${text}
 
     const jsonString = response.text.trim();
     const parsed = JSON.parse(jsonString);
-    
+
     const multipleChoice: MultipleChoiceQuestion[] = (parsed.multipleChoiceQuestions || []).map((q: any) => ({ ...q, type: 'multiple-choice' }));
     const written: WrittenAnswerQuestion[] = (parsed.writtenQuestions || []).map((q: any) => ({ ...q, type: 'written' }));
 
-    return [...multipleChoice, ...written];
+    const result = [...multipleChoice, ...written];
+
+    // Cache the result for 2 hours (7200 seconds) since quizes are more static
+    cacheService.set(cacheKey, result, 7200);
+
+    return result;
 
   } catch (error) {
     console.error("Gemini API call for quiz generation failed:", error);
@@ -236,4 +303,62 @@ export async function gradeWrittenAnswer(documentText: string, question: string,
             feedback: "Sorry, an error occurred while grading this answer."
         }
       }
+}
+
+// Batch analysis and quiz generation in one API call
+export async function analyzeDocumentWithQuiz(text: string, locale: 'en' | 'vi' = 'en', mcCount: number = 5, writtenCount: number = 2): Promise<{analysis: AnalysisResult, quiz: QuizQuestion[]}> {
+  // Check individual caches first
+  const analysisKey = cacheService.generateKey(text, 'analysis');
+  const quizKey = cacheService.generateKey(text, 'quiz', { locale, mcCount, writtenCount });
+
+  const cachedAnalysis = cacheService.get(analysisKey) as AnalysisResult | null;
+  const cachedQuiz = cacheService.get(quizKey) as QuizQuestion[] | null;
+
+  // If both are cached, return them
+  if (cachedAnalysis && cachedQuiz) {
+    console.log('Using cached analysis and quiz results');
+    return { analysis: cachedAnalysis, quiz: cachedQuiz };
+  }
+
+  const languageInstruction = locale === 'vi' ? 'The quiz questions, options, and explanations must be in Vietnamese.' : 'The quiz questions, options, and explanations must be in English.';
+
+  const prompt = `Analyze the following document and generate a quiz. Provide both analysis results and quiz questions in a JSON object.
+
+The quiz should contain exactly ${mcCount} multiple-choice questions and ${writtenCount} open-ended (written answer) questions.
+${languageInstruction}
+
+Document:
+---
+${text}
+---
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: analysisWithQuizSchema,
+      }
+    });
+
+    const jsonString = response.text.trim();
+    const parsed = JSON.parse(jsonString);
+
+    const analysis = parsed.analysis as AnalysisResult;
+    const multipleChoice: MultipleChoiceQuestion[] = (parsed.quiz.multipleChoiceQuestions || []).map((q: any) => ({ ...q, type: 'multiple-choice' }));
+    const written: WrittenAnswerQuestion[] = (parsed.quiz.writtenQuestions || []).map((q: any) => ({ ...q, type: 'written' }));
+    const quiz = [...multipleChoice, ...written];
+
+    // Cache both results
+    cacheService.set(analysisKey, analysis, 3600);
+    cacheService.set(quizKey, quiz, 7200);
+
+    return { analysis, quiz };
+
+  } catch (error) {
+    console.error("Batch API call failed:", error);
+    throw new Error("Failed to analyze document and generate quiz. Check the console for more details.");
+  }
 }
