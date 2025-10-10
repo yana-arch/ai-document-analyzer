@@ -134,19 +134,13 @@ export const extractTextFromSource = (source: File | string): Promise<string> =>
       try {
         // Using a CORS proxy to fetch URL content from the client-side.
         // This is a workaround for demo purposes. A production app should use a backend server.
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(source)}`;
-        const response = await fetch(proxyUrl);
-        
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(source)}`);
+
         if (!response.ok) {
           throw new Error("error.fetchFailure");
         }
-        
+
         const data = await response.json();
-        
-        if (!data.contents) {
-          throw new Error("error.contentRetrieval");
-        }
-        
         const htmlContent: string = data.contents;
         const extractedText = extractTextFromHtml(htmlContent);
 
