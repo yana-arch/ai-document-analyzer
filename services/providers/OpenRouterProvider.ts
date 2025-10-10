@@ -350,11 +350,18 @@ I need:
 
 ${languageInstruction}
 
-Please format your response naturally, listing the questions clearly with their answers. For example:
-"Multiple Choice Question 1: What is...?
-Options: A) answer1, B) answer2, C) answer3, D) answer4
-Correct: B) answer2
-Explanation: Because..."
+Please format your response using bold markdown (**) for emphasis. For each multiple choice question use this format:
+
+**Multiple Choice Question 1:** What is the question?
+A) Option 1
+B) Option 2
+C) Option 3
+D) Option 4
+
+**Correct:** B)
+**Explanation:** Explanation here...
+
+Separate each question with --- and list written questions at the end as simple statements.
 
 Document to base questions on:
 ${text}`;
@@ -398,9 +405,9 @@ ${text}`;
       const line = lines[i].trim();
       if (!line) continue;
 
-      // Look for multiple choice questions
-      const mcMatch = line.match(/multiple choice question\s*(\d+):?\s*(.+)/i);
-      const questionMatch = line.match(/question\s*(\d+):?\s*(.+)/i);
+      // Look for multiple choice questions (handling ** bold formatting)
+      const mcMatch = line.match(/\*{0,2}multiple choice question\s*(\d+):?\*{0,2}\s*(.+)/i);
+      const questionMatch = line.match(/\*{0,2}question\s*(\d+):?\*{0,2}\s*(.+)/i);
 
       if (mcMatch || questionMatch) {
         // Save previous question if exists
@@ -432,23 +439,23 @@ ${text}`;
         continue;
       }
 
-      // Look for options
+      // Look for options (handling various formats)
       const optionMatch = line.match(/^(?:options?\s*:?\s*)?([A-D])\)\s*(.+)/i);
       if (optionMatch && currentQuestion && 'options' in currentQuestion) {
         (currentQuestion.options as string[]).push(optionMatch[2].trim());
         continue;
       }
 
-      // Look for correct answer
-      const correctMatch = line.match(/correct\s*:?\s*([A-D])\)\s*(.+)/i);
+      // Look for correct answer (handling ** bold formatting)
+      const correctMatch = line.match(/\*{0,2}correct:?\*{0,2}\s*\**([A-D])\)\*{0,2}\s*(.+)?/i);
       if (correctMatch && currentQuestion && 'options' in currentQuestion) {
         const answerLetter = correctMatch[1].toUpperCase().charCodeAt(0) - 65; // A=0, B=1, etc.
         currentQuestion.correctAnswerIndex = Math.max(0, Math.min(answerLetter, (currentQuestion.options as string[]).length - 1));
         continue;
       }
 
-      // Look for explanation
-      const explanationMatch = line.match(/explanation:?\s*(.+)/i);
+      // Look for explanation (handling ** bold formatting)
+      const explanationMatch = line.match(/\*{0,2}explanation:?\*{0,2}\s*(.+)/i);
       if (explanationMatch && currentQuestion) {
         currentQuestion.explanation = explanationMatch[1].trim();
         continue;
