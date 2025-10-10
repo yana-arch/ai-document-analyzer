@@ -1,11 +1,17 @@
 import MarkdownIt from 'markdown-it';
 
-// Configure markdown-it
+// Configure markdown-it with simple code block enhancement
 const md = new MarkdownIt({
   html: false, // Don't allow HTML in markdown for security
   linkify: true,
   typographer: true,
   breaks: false, // Dont convert \n to <br>
+  highlight: function (str, lang) {
+    // Simple code block with copy functionality
+    const language = lang ? `language-${lang}` : '';
+    const escaped = md.utils.escapeHtml(str);
+    return `<pre class="code-block"><code class="${language}">${escaped}</code><button class="copy-button" title="Copy code" onclick="copyToClipboard(this)">📋</button></pre>`;
+  }
 });
 
 // Custom renderer for better styling
