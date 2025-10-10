@@ -20,6 +20,14 @@ const RefreshIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
 );
 
+const DeleteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+);
+
+const ReloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 12 2-2m0 0 2 2M5 10V4a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-4M5 10h2a1 1 0 0 1 1 1l-2 2"></path></svg>
+);
+
 
 const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -76,6 +84,29 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleSubmit = async (e?: React.FormEvent, overrideInput?: string) => {
+    if (e) e.preventDefault();
+    const messageToSend = overrideInput || input;
+    if (!messageToSend.trim() || isLoading || !chatRef.current) return;
+
+    const userMessage: ChatMessage = { role: 'user', text: messageToSend };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const result = await chatRef.current.sendMessage({ message: messageToSend });
+      const modelMessage: ChatMessage = { role: 'model', text: result.text };
+      setMessages(prev => [...prev, modelMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: ChatMessage = { role: 'model', text: t('chat.errorMessage') };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleClearChat = useCallback(async () => {
     setMessages([{ role: 'model', text: t('chat.initialMessage') }]);
     try {
@@ -93,27 +124,39 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     }
   }, [documentText, fileName, locale, settings, t]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || !chatRef.current) return;
+  const handleDeleteMessage = useCallback((index: number) => {
+    setMessages(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
-    const userMessage: ChatMessage = { role: 'user', text: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+  const handleReload = useCallback((modelIndex: number) => {
+    if (modelIndex <= 0 || messages[modelIndex].role !== 'model') return;
 
-    try {
-      const result = await chatRef.current.sendMessage({ message: input });
-      const modelMessage: ChatMessage = { role: 'model', text: result.text };
-      setMessages(prev => [...prev, modelMessage]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      const errorMessage: ChatMessage = { role: 'model', text: t('chat.errorMessage') };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+    // Find the user message before this model message
+    let userIndex = -1;
+    for (let i = modelIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userIndex = i;
+        break;
+      }
     }
-  };
+    if (userIndex === -1) return;
+
+    const userText = messages[userIndex].text;
+    // Remove from user to end
+    setMessages(prev => prev.slice(0, userIndex));
+    // Then send the user text
+    handleSubmit(undefined, userText);
+  }, [messages, handleSubmit]);
+
+  const handleResend = useCallback((userIndex: number) => {
+    if (userIndex <= 0 || messages[userIndex].role !== 'user') return;
+
+    const text = messages[userIndex].text;
+    // Remove from user to end
+    setMessages(prev => prev.slice(0, userIndex));
+    // Send the text
+    handleSubmit(undefined, text);
+  }, [messages, handleSubmit]);
 
   return (
     <Card 
@@ -136,11 +179,42 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
               {msg.role === 'model' && (
                 <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">AI</div>
               )}
-              <div className={`max-w-lg px-4 py-3 rounded-lg ${
+              <div className={`group relative max-w-lg px-4 py-4 rounded-lg ${
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-br-none'
                   : 'bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm rounded-bl-none'
               }`}>
+                {index > 0 && (
+                  <div className={`flex justify-end items-center gap-1 mb-2 ${
+                    msg.role === 'user' ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'
+                  } transition-opacity duration-200`}>
+                    {msg.role === 'model' && (
+                      <button
+                        onClick={() => handleReload(index)}
+                        className="p-1 rounded hover:bg-black/10 transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                        title="Reload response"
+                      >
+                        <ReloadIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    {msg.role === 'user' && (
+                      <button
+                        onClick={() => handleResend(index)}
+                        className="p-1 rounded hover:bg-black/10 transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                        title="Resend message"
+                      >
+                        <SendIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteMessage(index)}
+                      className="p-1 rounded hover:bg-black/10 transition-colors focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                      title="Delete message"
+                    >
+                      <DeleteIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 {msg.role === 'model' ? (
                   <div
                     className="text-sm leading-relaxed prose prose-zinc dark:prose-invert max-w-none prose-sm"
