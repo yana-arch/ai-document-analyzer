@@ -30,11 +30,11 @@ const retryWithBackoff = async <T>(
   throw lastError!;
 };
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set. Please add `API_KEY=YOUR_API_KEY` to the 'Run test' secret environments.");
+if (!import.meta.env.VITE_API_KEY) {
+  throw new Error("API_KEY environment variable not set. Please add `VITE_API_KEY=YOUR_API_KEY` to the .env file.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 
 const analysisSchema = {
   type: Type.OBJECT,
