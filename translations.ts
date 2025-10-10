@@ -3,6 +3,7 @@ const translations = {
     header: {
       title: "AI Document Analyzer",
       analyzeAnother: "Analyze Another Document",
+      settingsTooltip: "Settings",
     },
     loader: {
       analyzing: "Analyzing document... this may take a moment.",
@@ -90,12 +91,31 @@ const translations = {
       importSuccess: "History imported and merged successfully",
       importError: "Failed to import history. Invalid file format.",
       importFileType: "Please select a valid history JSON file",
+    },
+    settings: {
+      title: "Settings",
+      aiConfiguration: "AI Configuration",
+      uiPreferences: "UI Preferences",
+      languageStyle: "Language Style",
+      summaryLength: "Summary Length",
+      maxTopics: "Maximum Topics",
+      defaultMCQuestions: "Default Multiple Choice Questions",
+      defaultWrittenQuestions: "Default Written Questions",
+      customPrompt: "Custom AI Prompt Prefix (Optional)",
+      customPromptPlaceholder: "Add custom instructions for the AI analysis...",
+      autoSave: "Enable Auto-save",
+      autoSaveDesc: "Automatically save analysis results",
+      darkMode: "Dark Mode",
+      darkModeDesc: "Toggle between light and dark themes",
+      cancel: "Cancel",
+      saveSettings: "Save Settings",
     }
   },
   vi: {
     header: {
       title: "Trình phân tích tài liệu AI",
       analyzeAnother: "Phân tích tài liệu khác",
+      settingsTooltip: "Cài đặt",
     },
     loader: {
       analyzing: "Đang phân tích tài liệu... việc này có thể mất một chút thời gian.",
@@ -183,6 +203,24 @@ const translations = {
       importSuccess: "Nhập và gộp lịch sử thành công",
       importError: "Không thể nhập lịch sử. Định dạng tệp không hợp lệ.",
       importFileType: "Vui lòng chọn tệp JSON lịch sử hợp lệ",
+    },
+    settings: {
+      title: "Cài đặt",
+      aiConfiguration: "Cấu hình AI",
+      uiPreferences: "Tùy chọn giao diện",
+      languageStyle: "Kiểu ngôn ngữ",
+      summaryLength: "Độ dài tóm tắt",
+      maxTopics: "Số chủ đề tối đa",
+      defaultMCQuestions: "Số câu trắc nghiệm mặc định",
+      defaultWrittenQuestions: "Số câu tự luận mặc định",
+      customPrompt: "Tiền tố nhắc lệnh AI tùy chỉnh (Không bắt buộc)",
+      customPromptPlaceholder: "Thêm hướng dẫn tùy chỉnh cho phân tích AI...",
+      autoSave: "Bật tự động lưu",
+      autoSaveDesc: "Tự động lưu kết quả phân tích",
+      darkMode: "Chế độ tối",
+      darkModeDesc: "Chuyển đổi giữa chủ đề sáng và tối",
+      cancel: "Hủy",
+      saveSettings: "Lưu cài đặt",
     }
   }
 };

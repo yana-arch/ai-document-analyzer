@@ -7,15 +7,17 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface QuizGeneratorProps {
   documentText: string;
+  defaultMCQuestions?: number;
+  defaultWrittenQuestions?: number;
 }
 
-const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText }) => {
+const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, defaultMCQuestions = 5, defaultWrittenQuestions = 0 }) => {
   const [quizState, setQuizState] = useState<'idle' | 'generating' | 'taking' | 'grading' | 'finished'>('idle');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   // Config
-  const [mcCount, setMcCount] = useState(5);
-  const [writtenCount, setWrittenCount] = useState(0);
+  const [mcCount, setMcCount] = useState(defaultMCQuestions);
+  const [writtenCount, setWrittenCount] = useState(defaultWrittenQuestions);
   // Answers
   const [selectedMCAnswers, setSelectedMCAnswers] = useState<Record<number, number>>({});
   const [writtenAnswers, setWrittenAnswers] = useState<Record<number, string>>({});

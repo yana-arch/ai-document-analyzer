@@ -1,6 +1,37 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion } from '../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, UserSettings } from '../types';
 import { cacheService } from './cacheService';
+
+// Helper functions for settings integration
+function getLanguageStyleInstruction(languageStyle: string) {
+  switch (languageStyle) {
+    case 'conversational':
+      return 'Use a conversational, friendly tone in your analysis.';
+    case 'technical':
+      return 'Use technical, professional language appropriate for academic or business contexts.';
+    case 'simplified':
+      return 'Use simple, clear language that would be understandable to a general audience.';
+    case 'formal':
+    default:
+      return 'Use formal, professional language in your analysis.';
+  }
+}
+
+function getSummaryLengthInstruction(summaryLength: string) {
+  switch (summaryLength) {
+    case 'short':
+      return 'Provide a brief summary of 2-3 sentences.';
+    case 'medium':
+      return 'Provide a comprehensive summary of 4-6 sentences.';
+    case 'long':
+    default:
+      return 'Provide a detailed summary of 7+ sentences covering all key aspects.';
+  }
+}
+
+function getTopicsCountInstruction(maxTopics: number) {
+  return `Extract the top ${maxTopics} most important topics or concepts from the document.`;
+}
 
 // Retry utility with exponential backoff
 const retryWithBackoff = async <T>(
@@ -41,12 +72,12 @@ const analysisSchema = {
   properties: {
     summary: {
       type: Type.STRING,
-      description: "A concise, 3-5 sentence summary of the document."
+      description: "A summary of the document."
     },
     topics: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "A list of the top 5-10 most important topics or concepts from the document."
+      description: "A list of important topics or concepts from the document."
     },
     entities: {
       type: Type.ARRAY,
@@ -68,22 +99,41 @@ const analysisSchema = {
   required: ["summary", "topics", "entities", "sentiment"]
 };
 
-export async function analyzeDocument(text: string): Promise<AnalysisResult> {
-  // Check cache first
-  const cacheKey = cacheService.generateKey(text, 'analysis');
+export async function analyzeDocument(text: string, settings?: UserSettings): Promise<AnalysisResult> {
+  // Check cache first - include settings in cache key for different configurations
+  const cacheKey = cacheService.generateKey(text, 'analysis', settings);
   const cachedResult = cacheService.get(cacheKey);
   if (cachedResult) {
     console.log('Using cached analysis result');
     return cachedResult as AnalysisResult;
   }
 
-  const prompt = `Analyze the following document and provide the results in a JSON object. The analysis should be in English.
+  // Build prompt based on settings
+  const aiSettings = settings?.ai;
 
-Document:
----
-${text}
----
-`;
+  let prompt = 'Analyze the following document and provide the results in a JSON object. The analysis should be in English.\n\n';
+
+  if (aiSettings) {
+    // Add custom prompt prefix if provided
+    if (aiSettings.aiPromptPrefix.trim()) {
+      prompt += `${aiSettings.aiPromptPrefix.trim()}\n\n`;
+    }
+
+    // Add language style instruction
+    prompt += `${getLanguageStyleInstruction(aiSettings.languageStyle)}\n\n`;
+
+    // Add summary length instruction
+    prompt += `${getSummaryLengthInstruction(aiSettings.summaryLength)}\n\n`;
+
+    // Add topics count instruction
+    prompt += `${getTopicsCountInstruction(aiSettings.maxTopicsCount)}\n\n`;
+  } else {
+    // Default behavior when no settings provided
+    prompt += 'Provide a concise, 3-5 sentence summary.\n\n';
+    prompt += 'Extract the top 5-10 most important topics or concepts from the document.\n\n';
+  }
+
+  prompt += `Document:\n---\n${text}\n---\n`;
 
   try {
     const result = await retryWithBackoff(async () => {

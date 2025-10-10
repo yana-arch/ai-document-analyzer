@@ -1,5 +1,5 @@
 import React, { memo, Suspense, lazy } from 'react';
-import { AnalysisResult } from '../types';
+import { AnalysisResult, UserSettings } from '../types';
 import SummaryPanel from './SummaryPanel';
 import TopicsCloud from './TopicsCloud';
 import EntityExtractor from './EntityExtractor';
@@ -14,9 +14,10 @@ interface AnalysisDashboardProps {
   analysis: AnalysisResult;
   documentText: string;
   fileName: string;
+  settings: UserSettings;
 }
 
-const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, documentText, fileName }) => {
+const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, documentText, fileName, settings }) => {
   const { t } = useLanguage();
 
   const DocumentIcon: React.FC<React.SVGProps<SVGSVGElement>> = memo((props) => (
@@ -25,7 +26,11 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
 
   const MemoizedSummaryPanel = memo(() => <SummaryPanel summary={analysis.summary} />);
   const MemoizedQnAChat = memo(() => <QnAChat documentText={documentText} fileName={fileName} />);
-  const MemoizedQuizGenerator = memo(() => <QuizGenerator documentText={documentText} />);
+  const MemoizedQuizGenerator = memo(() => <QuizGenerator
+    documentText={documentText}
+    defaultMCQuestions={settings.ai.quizDefaultMCQuestions}
+    defaultWrittenQuestions={settings.ai.quizDefaultWrittenQuestions}
+  />);
   const MemoizedTopicsCloud = memo(() => <TopicsCloud topics={analysis.topics} />);
   const MemoizedEntityExtractor = memo(() => <EntityExtractor entities={analysis.entities} sentiment={analysis.sentiment} />);
 

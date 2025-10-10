@@ -1,13 +1,15 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { AnalysisResult, HistoryItem } from './types';
+import { AnalysisResult, HistoryItem, UserSettings } from './types';
 import { analyzeDocument } from './services/geminiService';
 import { extractTextFromSource } from './services/documentProcessor';
 import DocumentUploader from './components/DocumentUploader';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import Loader from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
+import SettingsModal from './components/SettingsModal';
 import { useLanguage } from './contexts/LanguageContext';
+import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
@@ -18,6 +20,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const { t, locale, setLocale } = useLanguage();
 
   useEffect(() => {
@@ -43,7 +47,8 @@ const App: React.FC = () => {
       const text = await extractTextFromSource(source);
       setDocumentText(text);
 
-      const result = await analyzeDocument(text);
+      const aiSettings = getAISettings(settings);
+      const result = await analyzeDocument(text, { ai: aiSettings, ui: settings.ui });
       setAnalysisResult(result);
       
       const newHistoryItem: HistoryItem = {
@@ -99,6 +104,11 @@ const App: React.FC = () => {
     setError(null);
     setFileName(null);
   };
+
+  const handleSaveSettings = useCallback((newSettings: UserSettings) => {
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  }, []);
   
   const ErrorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,6 +144,16 @@ const App: React.FC = () => {
             <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              title={t('header.settingsTooltip')}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
             <LanguageSwitcher />
             {analysisResult && (
               <button
@@ -175,10 +195,11 @@ const App: React.FC = () => {
             </div>
           </div>
         ) : analysisResult && documentText ? (
-          <AnalysisDashboard 
-            analysis={analysisResult} 
-            documentText={documentText} 
-            fileName={fileName || 'Uploaded Document'} 
+          <AnalysisDashboard
+            analysis={analysisResult}
+            documentText={documentText}
+            fileName={fileName || 'Uploaded Document'}
+            settings={settings}
           />
         ) : (
           <>
@@ -187,6 +208,14 @@ const App: React.FC = () => {
           </>
         )}
       </main>
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        settings={settings}
+        onSaveSettings={handleSaveSettings}
+        t={t}
+      />
     </div>
   );
 };

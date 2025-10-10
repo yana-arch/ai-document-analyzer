@@ -44,3 +44,23 @@ export interface GradedWrittenAnswer {
   maxScore: number;
   feedback: string;
 }
+
+export type LanguageStyle = 'formal' | 'conversational' | 'technical' | 'simplified';
+export type SummaryLength = 'short' | 'medium' | 'long';
+
+export interface AISettings {
+  languageStyle: LanguageStyle;
+  summaryLength: SummaryLength;
+  maxTopicsCount: number;
+  quizDefaultMCQuestions: number;
+  quizDefaultWrittenQuestions: number;
+  aiPromptPrefix: string;
+}
+
+export interface UserSettings {
+  ai: AISettings;
+  ui: {
+    enableDarkMode: boolean;
+    autoSave: boolean;
+  };
+}
