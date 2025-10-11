@@ -149,7 +149,19 @@ const translations = {
       },
       options: {
         mc: "Multiple Choice",
-        written: "Written Answer"
+        written: "Written Answer",
+        trueFalse: "True/False",
+        matching: "Matching",
+        ordering: "Ordering",
+        dragDrop: "Drag & Drop"
+      },
+      questionTypes: {
+        multipleChoice: "Multiple Choice",
+        written: "Written Answer",
+        trueFalse: "True/False",
+        matching: "Matching",
+        ordering: "Ordering",
+        dragDrop: "Drag & Drop"
       },
       totalQuestions: "Total Questions",
       completed: "Completed",
@@ -275,6 +287,18 @@ const translations = {
       options: {
         mc: "Trắc nghiệm",
         written: "Tự luận",
+        trueFalse: "Đúng/Sai",
+        matching: "Ghép nối",
+        ordering: "Sắp xếp",
+        dragDrop: "Kéo thả"
+      },
+      questionTypes: {
+        multipleChoice: "Trắc nghiệm",
+        written: "Tự luận",
+        trueFalse: "Đúng/Sai",
+        matching: "Ghép nối",
+        ordering: "Sắp xếp",
+        dragDrop: "Kéo thả"
       },
       writtenPlaceholder: "Viết câu trả lời của bạn vào đây...",
       yourAnswer: "Câu trả lời của bạn",

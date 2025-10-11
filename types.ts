@@ -45,6 +45,182 @@ export interface GradedWrittenAnswer {
   feedback: string;
 }
 
+// Enhanced Quiz Types
+export interface TrueFalseQuestion {
+  type: 'true-false';
+  question: string;
+  correctAnswer: boolean;
+  explanation: string;
+}
+
+export interface MatchingQuestion {
+  type: 'matching';
+  question: string;
+  leftItems: string[];
+  rightItems: string[];
+  correctPairs: Record<number, number>; // leftIndex -> rightIndex
+  explanation: string;
+}
+
+export interface OrderingQuestion {
+  type: 'ordering';
+  question: string;
+  items: string[];
+  correctOrder: number[];
+  explanation: string;
+}
+
+export interface DragDropQuestion {
+  type: 'drag-drop';
+  question: string;
+  content: string; // Text with placeholders like {{dropzone-1}}
+  dropZones: Array<{
+    id: string;
+    options: string[];
+    correctAnswer: string;
+  }>;
+  explanation: string;
+}
+
+export type EnhancedQuizQuestion =
+  | MultipleChoiceQuestion
+  | WrittenAnswerQuestion
+  | TrueFalseQuestion
+  | MatchingQuestion
+  | OrderingQuestion
+  | DragDropQuestion;
+
+export interface GradedWrittenAnswer {
+  score: number;
+  maxScore: number;
+  feedback: string;
+}
+
+// Learning Analytics Types
+export interface QuizAttempt {
+  id: string;
+  timestamp: string;
+  score: number;
+  maxScore: number;
+  timeSpent: number; // in seconds
+  answers: Record<number, any>;
+  questionResults: Array<{
+    questionIndex: number;
+    isCorrect: boolean;
+    timeSpent: number;
+    attempts: number;
+  }>;
+}
+
+export interface LearningProgress {
+  topic: string;
+  totalAttempts: number;
+  averageScore: number;
+  bestScore: number;
+  lastAttemptDate: string;
+  streakCount: number;
+  difficultyLevel: DifficultyLevel;
+  weakAreas: string[];
+  strongAreas: string[];
+}
+
+export interface UserStats {
+  totalQuizzes: number;
+  totalQuestions: number;
+  averageScore: number;
+  totalTimeSpent: number;
+  currentStreak: number;
+  longestStreak: number;
+  badges: Badge[];
+  achievements: Achievement[];
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlockedAt: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  progress: number;
+  maxProgress: number;
+  isCompleted: boolean;
+  completedAt?: string;
+}
+
+// Spaced Repetition Types
+export interface SRSItem {
+  id: string;
+  question: string;
+  answer: string;
+  difficulty: number; // 1-5 scale
+  nextReview: string; // ISO date
+  lastReviewed: string;
+  reviewCount: number;
+  easeFactor: number; // SM-2 algorithm
+  interval: number; // in days
+  repetitions: number;
+}
+
+export interface StudySession {
+  id: string;
+  startTime: string;
+  endTime?: string;
+  itemsStudied: string[];
+  correctCount: number;
+  totalCount: number;
+  sessionType: 'review' | 'new' | 'mixed';
+}
+
+// Adaptive Learning Types
+export interface AdaptivePath {
+  id: string;
+  name: string;
+  description: string;
+  topics: string[];
+  difficulty: DifficultyLevel;
+  estimatedHours: number;
+  prerequisites: string[];
+  learningObjectives: string[];
+}
+
+export interface PersonalizedRecommendation {
+  type: 'review' | 'practice' | 'advance' | 'focus';
+  reason: string;
+  items: string[]; // question IDs or topic IDs
+  priority: 'low' | 'medium' | 'high';
+}
+
+// Question Bank Types
+export interface QuestionBank {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
+  tags: string[];
+  questions: EnhancedQuizQuestion[];
+  createdAt: string;
+  updatedAt: string;
+  isPublic: boolean;
+  usageCount: number;
+}
+
+export interface QuestionTemplate {
+  id: string;
+  name: string;
+  category: string;
+  template: string; // Template with variables
+  variables: string[];
+  difficulty: DifficultyLevel;
+  estimatedTime: number;
+}
+
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface ExerciseExample {

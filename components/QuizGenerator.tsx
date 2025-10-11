@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
-import { QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, UserSettings } from '../types';
+import {
+  QuizQuestion,
+  GradedWrittenAnswer,
+  MultipleChoiceQuestion,
+  WrittenAnswerQuestion,
+  UserSettings,
+  QuizAttempt,
+  EnhancedQuizQuestion
+} from '../types';
 import { aiService } from '../services/aiService';
+import { adaptiveLearningService } from '../services/adaptiveLearningService';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -67,6 +76,8 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
   const handleFinishQuiz = async () => {
     setQuizState('grading');
 
+    const startTime = Date.now();
+
     // 1. Grade multiple choice
     let correctMC = 0;
     questions.forEach((q, index) => {
@@ -99,9 +110,45 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
         });
         setGradedAnswers(newGradedAnswers);
     }
-    
+
+    const finalScore = correctMC + totalWrittenScore;
+    const maxScore = questions.filter(q => q.type === 'multiple-choice').length + maxWrittenScore;
+    const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+
     setScore({ mc: correctMC, written: totalWrittenScore, maxWritten: maxWrittenScore });
     setQuizState('finished');
+
+    // Record quiz attempt for adaptive learning
+    const questionResults = questions.map((q, index) => {
+      let isCorrect = false;
+      let timeForQuestion = Math.floor(timeSpent / questions.length); // Simplified time distribution
+
+      if (q.type === 'multiple-choice') {
+        isCorrect = selectedMCAnswers[index] === q.correctAnswerIndex;
+      } else if (q.type === 'written') {
+        const graded = gradedAnswers[index];
+        isCorrect = graded ? graded.score >= graded.maxScore * 0.7 : false; // 70% threshold for written answers
+      }
+
+      return {
+        questionIndex: index,
+        isCorrect,
+        timeSpent: timeForQuestion,
+        attempts: 1 // Simplified - in real implementation, track actual attempts per question
+      };
+    });
+
+    const quizAttempt = {
+      timestamp: new Date().toISOString(),
+      score: finalScore,
+      maxScore,
+      timeSpent,
+      answers: { ...selectedMCAnswers, ...writtenAnswers },
+      questionResults
+    };
+
+    // Record attempt for adaptive learning
+    adaptiveLearningService.recordQuizAttempt(quizAttempt);
   };
   
   const handleRetakeQuiz = () => {
@@ -161,93 +208,159 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
   const renderTakingQuizGrid = () => (
     <div>
       <div className="mb-6 text-sm text-zinc-500 dark:text-zinc-400 font-medium text-center">
-        {t('quiz.totalQuestions')}: {questions.length} | {t('quiz.completed')}: {Object.keys(selectedMCAnswers).length + Object.keys(writtenAnswers).filter(q => q.trim()).length}
+        {t('quiz.totalQuestions')}: {questions.length} | {t('quiz.completed')}: {Object.keys(selectedMCAnswers).length + Object.keys(writtenAnswers).filter(i => writtenAnswers[Number(i)] && writtenAnswers[Number(i)].trim()).length}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {questions.map((question, index) => (
-          <div key={index} className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-            selectedMCAnswers[index] !== undefined || (writtenAnswers[index] && writtenAnswers[index].trim())
-              ? 'bg-green-50 dark:bg-green-900/20 border-green-400 ring-2 ring-green-400'
-              : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-600 hover:border-indigo-400'
-          }`} onClick={() => setCurrentQuestionIndex(index)}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">
-                {t('quiz.question')} {index + 1}
-              </span>
-              {selectedMCAnswers[index] !== undefined && (
-                <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">
-                  ✓ {t('quiz.answered')}
+        {questions.map((question, index) => {
+          const isAnswered = selectedMCAnswers[index] !== undefined || (writtenAnswers[index] && writtenAnswers[index].trim());
+          const isCurrent = currentQuestionIndex === index;
+
+          return (
+            <div
+              key={index}
+              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                isCurrent
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 ring-2 ring-blue-400'
+                  : isAnswered
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-400'
+                  : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-600 hover:border-indigo-400'
+              }`}
+              onClick={() => setCurrentQuestionIndex(isCurrent ? -1 : index)}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-sm font-semibold ${
+                  isCurrent
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-zinc-600 dark:text-zinc-400'
+                }`}>
+                  {t('quiz.question')} {index + 1}
                 </span>
-              )}
-              {writtenAnswers[index] && writtenAnswers[index].trim() && (
-                <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-                  ✓ {t('quiz.answered')}
-                </span>
-              )}
+                {isAnswered && (
+                  <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">
+                    ✓ {t('quiz.answered')}
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
+                    👁️ {t('quiz.viewing')}
+                  </span>
+                )}
+              </div>
+              <h4 className={`text-sm font-medium line-clamp-3 ${
+                isCurrent
+                  ? 'text-blue-800 dark:text-blue-200'
+                  : 'text-zinc-800 dark:text-zinc-200'
+              }`}>
+                {question.question}
+              </h4>
             </div>
-            <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 line-clamp-3">
-              {question.question}
-            </h4>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {currentQuestionIndex >= 0 && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border-l-4 border-blue-500 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">
-              {t('quiz.question')} {currentQuestionIndex + 1}
-            </h4>
-            <button
-              onClick={() => setCurrentQuestionIndex(-1)}
-              className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="mb-6 text-zinc-700 dark:text-zinc-300">
-            {currentQuestion.question}
-          </div>
-
-          {currentQuestion.type === 'multiple-choice' ? (
-            <div className="space-y-3">
-              {(currentQuestion as MultipleChoiceQuestion).options.map((option, index) => (
-                <label key={index} className={`flex items-center p-4 rounded-lg border transition-colors cursor-pointer ${
-                  selectedMCAnswers[currentQuestionIndex] === index
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500'
-                    : 'bg-zinc-100 dark:bg-zinc-700/50 border-zinc-200 dark:border-zinc-600 hover:bg-zinc-200/70 dark:hover:bg-zinc-700'
+      {currentQuestionIndex >= 0 && (() => {
+        const currentQuestion = questions[currentQuestionIndex];
+        return (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border-l-4 border-blue-500 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100">
+                  {t('quiz.question')} {currentQuestionIndex + 1} {t('quiz.of')} {questions.length}
+                </h4>
+                <span className={`px-2 py-1 text-xs rounded ${
+                  currentQuestion.type === 'multiple-choice'
+                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+                    : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
                 }`}>
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestionIndex}`}
-                    className="h-4 w-4 text-indigo-600 border-zinc-300 focus:ring-indigo-500"
-                    checked={selectedMCAnswers[currentQuestionIndex] === index}
-                    onChange={() => handleSelectMCAnswer(currentQuestionIndex, index)}
-                  />
-                  <span className="ml-3 text-zinc-700 dark:text-zinc-200">{option}</span>
-                </label>
-              ))}
+                  {currentQuestion.type === 'multiple-choice' ? t('quiz.options.mc') : t('quiz.options.written')}
+                </span>
+              </div>
+              <button
+                onClick={() => setCurrentQuestionIndex(-1)}
+                className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 text-xl font-bold"
+                title="Close question"
+              >
+                ✕
+              </button>
             </div>
-          ) : (
-            <div>
-              <textarea
-                value={writtenAnswers[currentQuestionIndex] || ''}
-                onChange={(e) => handleWrittenAnswerChange(currentQuestionIndex, e.target.value)}
-                rows={6}
-                placeholder={t('quiz.writtenPlaceholder')}
-                className="w-full px-4 py-2 bg-zinc-100 dark:bg-zinc-700/50 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-colors"
-              />
+
+            <div className="mb-6 text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {currentQuestion.question}
             </div>
-          )}
-        </div>
-      )}
+
+            {currentQuestion.type === 'multiple-choice' ? (
+              <div className="space-y-3">
+                {(currentQuestion as MultipleChoiceQuestion).options.map((option, index) => (
+                  <label
+                    key={index}
+                    className={`flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
+                      selectedMCAnswers[currentQuestionIndex] === index
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500 shadow-sm'
+                        : 'bg-zinc-100 dark:bg-zinc-700/50 border-zinc-200 dark:border-zinc-600 hover:bg-zinc-200/70 dark:hover:bg-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-500 hover:shadow-sm'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`question-${currentQuestionIndex}`}
+                      className="h-4 w-4 text-indigo-600 border-zinc-300 focus:ring-indigo-500"
+                      checked={selectedMCAnswers[currentQuestionIndex] === index}
+                      onChange={() => handleSelectMCAnswer(currentQuestionIndex, index)}
+                    />
+                    <span className="ml-3 text-zinc-700 dark:text-zinc-200 flex-1">{option}</span>
+                    {selectedMCAnswers[currentQuestionIndex] === index && (
+                      <span className="ml-2 text-indigo-600 dark:text-indigo-400">✓</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea
+                  value={writtenAnswers[currentQuestionIndex] || ''}
+                  onChange={(e) => handleWrittenAnswerChange(currentQuestionIndex, e.target.value)}
+                  rows={6}
+                  placeholder={t('quiz.writtenPlaceholder')}
+                  className="w-full px-4 py-2 bg-zinc-100 dark:bg-zinc-700/50 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-colors resize-vertical"
+                />
+                {writtenAnswers[currentQuestionIndex] && writtenAnswers[currentQuestionIndex].trim() && (
+                  <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                    ✓ {t('quiz.answered')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Navigation buttons for current question */}
+            <div className="flex justify-between items-center mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-600">
+              <button
+                onClick={() => setCurrentQuestionIndex(Math.max(-1, currentQuestionIndex - 1))}
+                disabled={currentQuestionIndex === 0}
+                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                ← {t('quiz.previous')}
+              </button>
+
+              <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                {currentQuestionIndex + 1} {t('quiz.of')} {questions.length}
+              </div>
+
+              <button
+                onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
+                disabled={currentQuestionIndex === questions.length - 1}
+                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('quiz.next')} →
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="text-center">
         <button
           onClick={handleFinishQuiz}
-          className="px-6 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-green-500"
+          className="px-6 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-green-500 transition-all shadow-sm hover:shadow-md"
         >
           {t('quiz.finishQuiz')}
         </button>

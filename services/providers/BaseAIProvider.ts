@@ -32,6 +32,113 @@ export abstract class BaseAIProvider {
 
   abstract generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]>;
 
+  // Enhanced method for smart fillable element generation
+  protected abstract generateSmartFillableElements?(documentText: string, exerciseContext: string, locale: 'en' | 'vi'): Promise<any[]>;
+
+  // Quality validation and improvement methods
+  protected validateExerciseStructure(exercise: any): boolean {
+    return !!(
+      exercise &&
+      exercise.title &&
+      exercise.title.length > 5 &&
+      exercise.instructions &&
+      exercise.instructions.length >= 2 &&
+      exercise.examples &&
+      exercise.examples.length > 0 &&
+      exercise.skills &&
+      exercise.skills.length > 0
+    );
+  }
+
+  protected ensureMinimumInstructions(instructions: string[]): string[] {
+    if (!instructions || instructions.length < 2) {
+      return [
+        'Review the provided information carefully.',
+        'Complete the exercise following the given structure.',
+        'Verify your work for accuracy and completeness.'
+      ];
+    }
+    return instructions;
+  }
+
+  protected ensureMinimumExamples(examples: any[]): any[] {
+    if (!examples || examples.length === 0) {
+      return [{
+        title: 'Example',
+        content: 'Refer to the document content for guidance.',
+        type: 'text'
+      }];
+    }
+    return examples;
+  }
+
+  protected extractContextualSkills(documentText: string, exerciseType: string): string[] {
+    const skills: string[] = [];
+    const lowerText = documentText.toLowerCase();
+
+    // Technical skills
+    if (lowerText.includes('programming') || lowerText.includes('code')) {
+      skills.push('Programming');
+    }
+    if (lowerText.includes('design') || lowerText.includes('ui/ux')) {
+      skills.push('Design thinking');
+    }
+    if (lowerText.includes('management') || lowerText.includes('leadership')) {
+      skills.push('Leadership');
+    }
+    if (lowerText.includes('analysis') || lowerText.includes('research')) {
+      skills.push('Research');
+    }
+    if (lowerText.includes('communication') || lowerText.includes('presentation')) {
+      skills.push('Communication');
+    }
+
+    // Exercise type specific skills
+    const typeSkills = {
+      practice: ['Practical application', 'Hands-on skills'],
+      simulation: ['Decision making', 'Problem solving'],
+      analysis: ['Critical thinking', 'Data analysis'],
+      application: ['Implementation', 'Project management'],
+      fillable: ['Organization', 'Attention to detail']
+    };
+
+    const exerciseTypeSkills = typeSkills[exerciseType as keyof typeof typeSkills] || ['General skills'];
+
+    return [...exerciseTypeSkills, ...skills].slice(0, 5);
+  }
+
+  protected estimateExerciseTime(exerciseType: string): string {
+    const baseTimes = {
+      practice: '15-20 minutes',
+      simulation: '25-35 minutes',
+      analysis: '20-30 minutes',
+      application: '45-60 minutes',
+      fillable: '10-15 minutes'
+    };
+
+    return baseTimes[exerciseType as keyof typeof baseTimes] || '20-30 minutes';
+  }
+
+  protected suggestFillableType(documentText: string, exerciseContext: string): string {
+    const context = (documentText + ' ' + exerciseContext).toLowerCase();
+
+    // Analyze context to suggest best fillable type
+    if (context.includes('schedule') || context.includes('timeline') || context.includes('time')) {
+      return 'schedule';
+    }
+    if (context.includes('compare') || context.includes('evaluation') || context.includes('matrix')) {
+      return 'matrix';
+    }
+    if (context.includes('form') || context.includes('data') || context.includes('collection')) {
+      return 'form';
+    }
+    if (context.includes('list') || context.includes('steps') || context.includes('checklist')) {
+      return 'list';
+    }
+
+    return 'table'; // Default fallback
+  }
+
   // Optional method to test API connectivity
   async testConnection(): Promise<boolean> {
     try {

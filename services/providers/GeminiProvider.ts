@@ -2,6 +2,248 @@ import { GoogleGenAI, Type, Chat } from "@google/genai";
 import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, Exercise, AISettings } from '../../types';
 import { BaseAIProvider } from './BaseAIProvider';
 
+// Prompt Template System for better organization and reusability
+class PromptTemplate {
+  private templates: Map<string, string> = new Map();
+
+  constructor() {
+    this.initializeTemplates();
+  }
+
+  private initializeTemplates() {
+    // Document Analysis Templates
+    this.templates.set('document-analysis', `Analyze the document and provide structured results in JSON format.
+
+Requirements:
+- Language style: {languageStyle}
+- Summary length: {summaryLength}
+- Maximum topics: {maxTopics}
+- Extract key entities and determine sentiment
+
+Document Content:
+---
+{text}
+---`);
+
+    // Exercise Generation Templates
+    this.templates.set('exercise-generation', `Generate {totalExercises} exercises from the document.
+
+Exercise Distribution:
+- Practice: {practiceCount}
+- Simulation: {simulationCount}
+- Analysis: {analysisCount}
+- Application: {applicationCount}
+- Fillable: {fillableCount}
+
+Requirements:
+- Language: {language}
+- Each exercise must have clear objective and instructions
+- Include practical examples for each exercise
+- Ensure exercises are relevant to document content
+- For fillable exercises, you MUST include fillableElements array with appropriate interactive elements
+
+Document Content:
+---
+{text}
+---`);
+
+    // Fillable Element Templates
+    this.templates.set('fillable-element', `Generate a fillable element based on document content and exercise context.
+
+Exercise Context: {exerciseContext}
+Document Content: {documentText}
+Language: {language}
+
+Generate ONE relevant fillable element using these structures:
+
+For tables: { "type": "table", "data": { "rows": [["Header1", "Header2"], ["", ""]] } }
+For lists: { "type": "list", "data": { "items": ["Item1", "", ""] } }
+For schedules: { "type": "schedule", "data": { "schedule": [["Time", "Activity"], ["9:00", ""]] } }
+For forms: { "type": "form", "data": { "fieldList": ["Field1", "Field2"], "fields": {} } }
+
+Choose the most appropriate type based on the exercise context.`);
+
+    // Quality Validation Template
+    this.templates.set('quality-validation', `Evaluate the quality of generated exercises.
+
+Exercises to evaluate:
+{exerciseJson}
+
+Evaluation Criteria:
+1. Relevance to document content (1-5)
+2. Clarity of instructions (1-5)
+3. Completeness of examples (1-5)
+4. Appropriate difficulty level (1-5)
+5. Engagement potential (1-5)
+
+Provide detailed feedback for improvement.`);
+  }
+
+  getTemplate(name: string, variables: Record<string, string> = {}): string {
+    const template = this.templates.get(name);
+    if (!template) {
+      throw new Error(`Template '${name}' not found`);
+    }
+
+    return this.interpolate(template, variables);
+  }
+
+  private interpolate(template: string, variables: Record<string, string>): string {
+    return template.replace(/{(\w+)}/g, (match, key) => variables[key] || match);
+  }
+}
+
+// Exercise Type Definitions with specific requirements
+const EXERCISE_TYPES = {
+  practice: {
+    name: 'Practice',
+    description: 'Hands-on exercises for skill development',
+    requirements: [
+      'Clear step-by-step instructions',
+      'Practical examples',
+      'Immediate feedback opportunities',
+      'Progressive difficulty'
+    ]
+  },
+  simulation: {
+    name: 'Simulation',
+    description: 'Real-world scenario simulations',
+    requirements: [
+      'Realistic scenario setup',
+      'Decision-making opportunities',
+      'Consequence consideration',
+      'Debriefing guidelines'
+    ]
+  },
+  analysis: {
+    name: 'Analysis',
+    description: 'Critical thinking and analysis exercises',
+    requirements: [
+      'Clear analytical framework',
+      'Guiding questions',
+      'Evidence-based reasoning',
+      'Conclusion synthesis'
+    ]
+  },
+  application: {
+    name: 'Application',
+    description: 'Real-world application projects',
+    requirements: [
+      'Practical application context',
+      'Resource requirements',
+      'Implementation steps',
+      'Success criteria'
+    ]
+  },
+  fillable: {
+    name: 'Fillable',
+    description: 'Interactive fill-in exercises',
+    requirements: [
+      'Clear structure template',
+      'Appropriate data types',
+      'Progressive disclosure',
+      'Validation criteria'
+    ]
+  }
+} as const;
+
+// Enhanced Fillable Element Types with comprehensive table templates
+const FILLABLE_TYPES = {
+  table: {
+    name: 'Data Table',
+    structure: {
+      type: 'table',
+      data: {
+        rows: [['Column 1', 'Column 2', 'Column 3'], ['', '', ''], ['', '', '']]
+      }
+    },
+    useCases: ['comparison', 'data_entry', 'planning', 'tracking'],
+    templates: {
+      generic: {
+        headers: ['Item', 'Description', 'Status', 'Notes'] as string[],
+        sampleData: ['', '', 'Pending', ''] as string[]
+      },
+      comparison: {
+        headers: ['Criteria', 'Option A', 'Option B', 'Recommendation'] as string[],
+        sampleData: ['', '', '', ''] as string[]
+      },
+      planning: {
+        headers: ['Task', 'Priority', 'Estimated Hours', 'Status', 'Due Date'] as string[],
+        sampleData: ['', 'Medium', '', 'Pending', ''] as string[]
+      },
+      analysis: {
+        headers: ['Metric', 'Current Value', 'Target Value', 'Gap Analysis', 'Action Items'] as string[],
+        sampleData: ['', '', '', '', ''] as string[]
+      },
+      tracking: {
+        headers: ['Date', 'Activity', 'Progress', 'Challenges', 'Next Steps'] as string[],
+        sampleData: ['', '', '', '', ''] as string[]
+      },
+      scrum: {
+        headers: ['Sprint Goal', 'User Stories', 'Acceptance Criteria', 'Status', 'Assignee'] as string[],
+        sampleData: ['', '', '', 'Not Started', ''] as string[]
+      },
+      project: {
+        headers: ['Milestone', 'Deliverables', 'Dependencies', 'Timeline', 'Status'] as string[],
+        sampleData: ['', '', '', '', 'On Track'] as string[]
+      },
+      learning: {
+        headers: ['Topic', 'Key Concepts', 'Examples', 'Practice Items', 'Mastery Level'] as string[],
+        sampleData: ['', '', '', '', 'Beginner'] as string[]
+      },
+      evaluation: {
+        headers: ['Criteria', 'Weight', 'Score (1-5)', 'Comments', 'Improvement Areas'] as string[],
+        sampleData: ['', '', '', '', ''] as string[]
+      },
+      research: {
+        headers: ['Research Question', 'Methodology', 'Data Sources', 'Findings', 'Conclusions'] as string[],
+        sampleData: ['', '', '', '', ''] as string[]
+      }
+    }
+  },
+  list: {
+    name: 'Interactive List',
+    structure: {
+      type: 'list',
+      data: {
+        items: ['Item 1', '', '', '']
+      }
+    },
+    useCases: ['checklist', 'steps', 'requirements', 'inventory']
+  },
+  schedule: {
+    name: 'Schedule/Timeline',
+    structure: {
+      type: 'schedule',
+      data: {
+        schedule: [['Time', 'Activity', 'Duration'], ['9:00', '', ''], ['10:00', '', '']]
+      }
+    },
+    useCases: ['timeline', 'planning', 'project_schedule', 'daily_routine']
+  },
+  form: {
+    name: 'Structured Form',
+    structure: {
+      type: 'form',
+      data: {
+        fieldList: ['Field 1', 'Field 2', 'Field 3'],
+        fields: {}
+      }
+    },
+    useCases: ['data_collection', 'assessment', 'registration', 'feedback']
+  },
+  matrix: {
+    name: 'Comparison Matrix',
+    structure: {
+      type: 'matrix',
+      data: {
+        rows: [['Criteria', 'Option A', 'Option B', 'Recommendation'], ['', '', '', ''], ['', '', '', '']]
+      }
+    },
+    useCases: ['comparison', 'evaluation', 'decision_matrix', 'analysis']
+  }
+} as const;
+
 // Retry utility with exponential backoff
 const retryWithBackoff = async <T>(
   operation: () => Promise<T>,
@@ -64,10 +306,12 @@ function getTopicsCountInstruction(maxTopics: number) {
 export class GeminiProvider extends BaseAIProvider {
   private ai: GoogleGenAI;
   private cache: Map<string, any> = new Map();
+  private promptTemplate: PromptTemplate;
 
   constructor(apiKey: string) {
     super('Gemini', apiKey);
     this.ai = new GoogleGenAI({ apiKey });
+    this.promptTemplate = new PromptTemplate();
   }
 
   async analyzeDocument(text: string, settings?: AISettings): Promise<AnalysisResult> {
@@ -270,8 +514,53 @@ Document context: ${documentText}`;
       return this.cache.get(cacheKey);
     }
 
+    const totalExercises = Object.values(exerciseCounts).reduce((sum, count) => sum + count, 0);
+
+    try {
+      // Step 1: Generate exercises using template
+      const rawExercises = await this.generateExercisesWithTemplate(text, locale, exerciseCounts, totalExercises);
+
+      // Step 2: Validate and improve exercises
+      const validatedExercises = await this.validateAndImproveExercises(rawExercises, text, locale);
+
+      // Step 3: Generate fillable elements for fillable exercises
+      const exercisesWithFillables = await this.enhanceFillableExercises(validatedExercises, text, locale);
+
+      // Step 4: Final quality check
+      const finalExercises = await this.performFinalQualityCheck(exercisesWithFillables, text);
+
+      this.cache.set(cacheKey, finalExercises);
+      return finalExercises;
+
+    } catch (error) {
+      console.error("Gemini exercises generation error:", error);
+      throw new Error("Failed to generate exercises with Gemini.");
+    }
+  }
+
+  private async generateExercisesWithTemplate(
+    text: string,
+    locale: 'en' | 'vi',
+    exerciseCounts: any,
+    totalExercises: number
+  ): Promise<any[]> {
     const languageInstruction = locale === 'vi' ? 'Exercises in Vietnamese.' : 'Exercises in English.';
 
+    // Use template for consistent prompt structure
+    const templateVariables = {
+      totalExercises: totalExercises.toString(),
+      practiceCount: exerciseCounts.practice.toString(),
+      simulationCount: exerciseCounts.simulation.toString(),
+      analysisCount: exerciseCounts.analysis.toString(),
+      applicationCount: exerciseCounts.application.toString(),
+      fillableCount: exerciseCounts.fillable.toString(),
+      language: languageInstruction,
+      text: text
+    };
+
+    const prompt = this.promptTemplate.getTemplate('exercise-generation', templateVariables);
+
+    // Enhanced schema with better validation
     const exercisesSchema = {
       type: Type.OBJECT,
       properties: {
@@ -286,7 +575,6 @@ Document context: ${documentText}`;
                 enum: ["practice", "simulation", "analysis", "application", "fillable"],
                 description: "Type of exercise"
               },
-
               difficulty: {
                 type: Type.STRING,
                 enum: ["beginner", "intermediate", "advanced"],
@@ -297,7 +585,8 @@ Document context: ${documentText}`;
               instructions: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "Step-by-step instructions"
+                description: "Step-by-step instructions",
+                minItems: 2
               },
               examples: {
                 type: Type.ARRAY,
@@ -313,72 +602,297 @@ Document context: ${documentText}`;
                     }
                   }
                 },
-                description: "Examples with title and content"
+                description: "Examples with title and content",
+                minItems: 1
+              },
+              fillableElements: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING, description: "Element ID" },
+                    type: {
+                      type: Type.STRING,
+                      enum: ["table", "list", "schedule", "form", "matrix"],
+                      description: "Element type"
+                    },
+                    data: {
+                      type: Type.OBJECT,
+                      properties: {
+                        rows: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                          },
+                          description: "Table rows data"
+                        },
+                        items: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                          description: "List items data"
+                        },
+                        schedule: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING }
+                          },
+                          description: "Schedule data"
+                        },
+                        fieldList: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                          description: "Form field names"
+                        },
+                        fields: {
+                          type: Type.OBJECT,
+                          properties: {
+                            _default: { type: Type.STRING, description: "Default field" }
+                          },
+                          additionalProperties: { type: Type.STRING },
+                          description: "Form field values"
+                        }
+                      },
+                      description: "Element data structure"
+                    }
+                  }
+                },
+                description: "Fillable elements for interactive exercises"
               },
               skills: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "Skills being developed"
+                description: "Skills being developed",
+                minItems: 1
               },
               estimatedTime: { type: Type.STRING, description: "Estimated completion time" }
             },
             required: ["id", "type", "difficulty", "title", "objective", "instructions", "examples", "skills"]
           },
-          description: "List of exercises"
+          description: "List of exercises",
+          minItems: totalExercises
         }
       },
       required: ["exercises"]
     };
 
-    const prompt = `Generate exercises from this document. ${languageInstruction}
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: exercisesSchema,
+      }
+    });
 
-Generate exactly:
-- ${exerciseCounts.practice} practice exercises
-- ${exerciseCounts.simulation} simulation exercises
-- ${exerciseCounts.analysis} analysis exercises
-- ${exerciseCounts.application} application exercises
-- ${exerciseCounts.fillable} fillable exercises (tables, forms, scheduling, product backlog creation)
-
-Each exercise should include practical examples and clear instructions like mind maps, role-playing, gap-fill exercises, mini-projects, etc.
-
-For fillable exercises, create interactive exercises where users fill information using these specific structures:
-
-**Table Fillable Element Structure:**
-{
-  "type": "table",
-  "data": {
-    "rows": [["Row1Col1", "Row1Col2"], ["Row2Col1", "Row2Col2"], ["", ""]]  // Pre-filled or empty cells
+    const data = JSON.parse(response.text.trim());
+    return data.exercises || [];
   }
-}
 
-**List Fillable Element Structure:**
-{
-  "type": "list",
-  "data": {
-    "items": ["Item 1", "", "", ""]  // Pre-filled items or empty slots
+  protected async validateAndImproveExercises(exercises: any[], documentText: string, locale: 'en' | 'vi'): Promise<any[]> {
+    // Quality validation and improvement
+    const validatedExercises = exercises.map(exercise => ({
+      ...exercise,
+      id: exercise.id || `exercise-${Math.random().toString(36).substr(2, 9)}`,
+      instructions: this.ensureMinimumInstructions(exercise.instructions),
+      examples: this.ensureMinimumExamples(exercise.examples),
+      skills: this.extractSkillsFromDocument(exercise, documentText),
+      estimatedTime: exercise.estimatedTime || this.estimateTime(exercise)
+    }));
+
+    return validatedExercises;
   }
-}
 
-**Schedule Fillable Element Structure:**
-{
-  "type": "schedule",
-  "data": {
-    "schedule": [["Time", "Activity"], ["9:00", ""], ["10:00", ""], ["11:00", ""]]  // Time-based table
+  protected async enhanceFillableExercises(exercises: any[], documentText: string, locale: 'en' | 'vi'): Promise<any[]> {
+    const enhancedExercises = await Promise.all(
+      exercises.map(async (exercise) => {
+        if (exercise.type === 'fillable') {
+          try {
+            // Generate smart fillable elements based on exercise context
+            const fillableElements = await this.generateSmartFillableElements(
+              documentText,
+              exercise.objective || exercise.title,
+              locale
+            );
+
+            return {
+              ...exercise,
+              fillableElements: fillableElements.map(element => ({
+                id: element.id || `element-${Math.random().toString(36).substr(2, 9)}`,
+                type: element.type,
+                data: element.data || {}
+              }))
+            };
+          } catch (error) {
+            console.warn(`Failed to generate fillable elements for ${exercise.title}:`, error);
+            // Fallback to mock data
+            return {
+              ...exercise,
+              fillableElements: [this.generateMockFillableElement(exercise.objective || exercise.title, locale)]
+            };
+          }
+        }
+        return exercise;
+      })
+    );
+
+    return enhancedExercises;
   }
-}
 
-**Form Fillable Element Structure:**
-{
-  "type": "form",
-  "data": {
-    "fieldList": ["Field 1", "Field 2", "Field 3"],  // Field names
-    "fields": {}  // Leave empty for users to fill
+  protected async performFinalQualityCheck(exercises: any[], documentText: string): Promise<any[]> {
+    // Final validation to ensure all exercises meet quality standards
+    return exercises.filter(exercise => {
+      // Basic quality checks
+      const hasValidTitle = exercise.title && exercise.title.length > 5;
+      const hasValidInstructions = exercise.instructions && exercise.instructions.length >= 2;
+      const hasValidExamples = exercise.examples && exercise.examples.length > 0;
+      const hasValidSkills = exercise.skills && exercise.skills.length > 0;
+
+      return hasValidTitle && hasValidInstructions && hasValidExamples && hasValidSkills;
+    });
   }
-}
 
-IMPORTANT: For fillable exercises, provide fillableElements as an array of objects with the above structures. Make sure the data matches exactly what the application expects.
+  protected ensureMinimumInstructions(instructions: string[]): string[] {
+    if (!instructions || instructions.length < 2) {
+      return [
+        'Review the provided information carefully.',
+        'Complete the exercise following the given structure.',
+        'Verify your work for accuracy and completeness.'
+      ];
+    }
+    return instructions;
+  }
 
-Document: ${text}`;
+  protected ensureMinimumExamples(examples: any[]): any[] {
+    if (!examples || examples.length === 0) {
+      return [{
+        title: 'Example',
+        content: 'Refer to the document content for guidance.',
+        type: 'text'
+      }];
+    }
+    return examples;
+  }
+
+  protected extractSkillsFromDocument(exercise: any, documentText: string): string[] {
+    // Extract relevant skills based on exercise type and document content
+    const defaultSkills = {
+      practice: ['Practical application', 'Hands-on skills'],
+      simulation: ['Decision making', 'Problem solving'],
+      analysis: ['Critical thinking', 'Data analysis'],
+      application: ['Implementation', 'Project management'],
+      fillable: ['Organization', 'Attention to detail']
+    };
+
+    const exerciseTypeSkills = defaultSkills[exercise.type] || ['General skills'];
+
+    // Add context-specific skills based on document content
+    const contextSkills = this.extractContextSkills(documentText, exercise);
+
+    return [...exerciseTypeSkills, ...contextSkills].slice(0, 5); // Limit to 5 skills
+  }
+
+  protected extractContextSkills(documentText: string, exercise: any): string[] {
+    const skills: string[] = [];
+    const lowerText = documentText.toLowerCase();
+
+    // Technical skills
+    if (lowerText.includes('programming') || lowerText.includes('code')) {
+      skills.push('Programming');
+    }
+    if (lowerText.includes('design') || lowerText.includes('ui/ux')) {
+      skills.push('Design thinking');
+    }
+    if (lowerText.includes('management') || lowerText.includes('leadership')) {
+      skills.push('Leadership');
+    }
+    if (lowerText.includes('analysis') || lowerText.includes('research')) {
+      skills.push('Research');
+    }
+    if (lowerText.includes('communication') || lowerText.includes('presentation')) {
+      skills.push('Communication');
+    }
+
+    return skills;
+  }
+
+  protected estimateTime(exercise: any): string {
+    // Estimate time based on exercise type and complexity
+    const baseTimes = {
+      practice: '15-20 minutes',
+      simulation: '25-35 minutes',
+      analysis: '20-30 minutes',
+      application: '45-60 minutes',
+      fillable: '10-15 minutes'
+    };
+
+    return baseTimes[exercise.type] || '20-30 minutes';
+  }
+
+  protected async generateSmartFillableElements(
+    documentText: string,
+    exerciseContext: string,
+    locale: 'en' | 'vi'
+  ): Promise<any[]> {
+    // Analyze document and exercise context to determine best fillable type
+    const suggestedType = this.suggestFillableType(documentText, exerciseContext);
+
+    const templateVariables = {
+      exerciseContext,
+      documentText,
+      language: locale === 'vi' ? 'Vietnamese' : 'English'
+    };
+
+    const prompt = this.promptTemplate.getTemplate('fillable-element', templateVariables);
+
+    const elementSchema = {
+      type: Type.OBJECT,
+      properties: {
+        type: {
+          type: Type.STRING,
+          enum: Object.keys(FILLABLE_TYPES),
+          description: "Type of fillable element"
+        },
+        data: {
+          type: Type.OBJECT,
+          properties: {
+            rows: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              description: "Table rows data"
+            },
+            items: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "List items data"
+            },
+            schedule: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              description: "Schedule data"
+            },
+            fieldList: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Form field names"
+            },
+            fields: {
+              type: Type.OBJECT,
+              description: "Form field values"
+            }
+          },
+          description: "Data structure for the element"
+        }
+      },
+      required: ["type", "data"]
+    };
 
     try {
       const response = await this.ai.models.generateContent({
@@ -386,18 +900,177 @@ Document: ${text}`;
         contents: prompt,
         config: {
           responseMimeType: "application/json",
-          responseSchema: exercisesSchema,
+          responseSchema: elementSchema,
         }
       });
 
-      const data = JSON.parse(response.text.trim());
-      const result = data.exercises || [];
-      this.cache.set(cacheKey, result);
-      return result;
+      const element = JSON.parse(response.text.trim());
+      return [{
+        id: `smart-${Math.random().toString(36).substr(2, 9)}`,
+        ...element
+      }];
     } catch (error) {
-      console.error("Gemini exercises generation error:", error);
-      throw new Error("Failed to generate exercises with Gemini.");
+      console.warn("Smart fillable generation failed, using fallback:", error);
+      return [this.generateContextualFillableElement(suggestedType, exerciseContext)];
     }
+  }
+
+  protected suggestFillableType(documentText: string, exerciseContext: string): string {
+    const context = (documentText + ' ' + exerciseContext).toLowerCase();
+
+    // Analyze context to suggest best fillable type
+    if (context.includes('schedule') || context.includes('timeline') || context.includes('time')) {
+      return 'schedule';
+    }
+    if (context.includes('compare') || context.includes('evaluation') || context.includes('matrix')) {
+      return 'matrix';
+    }
+    if (context.includes('form') || context.includes('data') || context.includes('collection')) {
+      return 'form';
+    }
+    if (context.includes('list') || context.includes('steps') || context.includes('checklist')) {
+      return 'list';
+    }
+
+    return 'table'; // Default fallback
+  }
+
+  protected generateContextualFillableElement(type: string, context: string): any {
+    if (type === 'table') {
+      return this.generateSmartTableElement(context);
+    }
+
+    const fillableType = FILLABLE_TYPES[type as keyof typeof FILLABLE_TYPES] || FILLABLE_TYPES.table;
+
+    return {
+      id: `contextual-${Math.random().toString(36).substr(2, 9)}`,
+      type: fillableType.structure.type,
+      data: this.customizeFillableData(fillableType.structure.data, context)
+    };
+  }
+
+  protected generateSmartTableElement(context: string): any {
+    // Analyze context to determine the best table template
+    const lowerContext = context.toLowerCase();
+    const tableTemplates = FILLABLE_TYPES.table.templates;
+
+    // Find the most appropriate template based on context keywords
+    let selectedTemplate = tableTemplates.generic;
+
+    if (lowerContext.includes('scrum') || lowerContext.includes('sprint') || lowerContext.includes('agile')) {
+      selectedTemplate = tableTemplates.scrum;
+    } else if (lowerContext.includes('project') || lowerContext.includes('planning') || lowerContext.includes('milestone')) {
+      selectedTemplate = tableTemplates.project;
+    } else if (lowerContext.includes('learning') || lowerContext.includes('study') || lowerContext.includes('concept')) {
+      selectedTemplate = tableTemplates.learning;
+    } else if (lowerContext.includes('evaluation') || lowerContext.includes('assessment') || lowerContext.includes('score')) {
+      selectedTemplate = tableTemplates.evaluation;
+    } else if (lowerContext.includes('research') || lowerContext.includes('methodology') || lowerContext.includes('finding')) {
+      selectedTemplate = tableTemplates.research;
+    } else if (lowerContext.includes('analysis') || lowerContext.includes('metric') || lowerContext.includes('gap')) {
+      selectedTemplate = tableTemplates.analysis;
+    } else if (lowerContext.includes('comparison') || lowerContext.includes('criteria') || lowerContext.includes('option')) {
+      selectedTemplate = tableTemplates.comparison;
+    } else if (lowerContext.includes('tracking') || lowerContext.includes('progress') || lowerContext.includes('challenge')) {
+      selectedTemplate = tableTemplates.tracking;
+    } else if (lowerContext.includes('planning') || lowerContext.includes('task') || lowerContext.includes('priority')) {
+      selectedTemplate = tableTemplates.planning;
+    }
+
+    // Create table structure with selected template
+    const headers = selectedTemplate.headers;
+    const sampleRow = selectedTemplate.sampleData;
+
+    // Generate 3-4 rows for the table
+    const rows = [headers];
+
+    // Add sample data rows with some empty cells for user input
+    for (let i = 0; i < 3; i++) {
+      const row = sampleRow.map(cell => {
+        // Randomly leave some cells empty for user input (30% chance)
+        return Math.random() < 0.3 ? '' : cell;
+      });
+      rows.push(row);
+    }
+
+    // Add one completely empty row for user to fill
+    const emptyRow = new Array(headers.length).fill('');
+    rows.push(emptyRow);
+
+    return {
+      id: `smart-table-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'table',
+      data: {
+        rows: rows,
+        template: selectedTemplate // Store template info for reference
+      }
+    };
+  }
+
+  protected customizeFillableData(baseData: any, context: string): any {
+    // Customize the fillable data based on context
+    const customized = JSON.parse(JSON.stringify(baseData));
+    const lowerContext = context.toLowerCase();
+
+    if (lowerContext.includes('schedule') || lowerContext.includes('timeline')) {
+      if (customized.rows) {
+        customized.rows[0] = ['Time', 'Activity', 'Notes'];
+      }
+    }
+
+    if (lowerContext.includes('comparison') || lowerContext.includes('analysis')) {
+      if (customized.rows) {
+        customized.rows[0] = ['Criteria', 'Option A', 'Option B', 'Recommendation'];
+      }
+    }
+
+    return customized;
+  }
+
+  protected generateMockFillableElement(context: string, locale: 'en' | 'vi'): any {
+    // Generate contextual mock data based on exercise context
+    const lowerContext = context.toLowerCase();
+
+    if (lowerContext.includes('scrum') || lowerContext.includes('sprint')) {
+      return {
+        id: `mock-scrum-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Sprint Goal', 'User Stories', 'Acceptance Criteria', 'Status'],
+            ['', '', '', ''],
+            ['', '', '', '']
+          ]
+        }
+      };
+    }
+
+    if (lowerContext.includes('planning') || lowerContext.includes('project')) {
+      return {
+        id: `mock-planning-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Task', 'Priority', 'Estimated Hours', 'Status'],
+            ['', '', '', ''],
+            ['', '', '', '']
+          ]
+        }
+      };
+    }
+
+    // Default fillable element
+    return {
+      id: `mock-default-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'table',
+      data: {
+        rows: [
+          ['Item', 'Description', 'Status'],
+          ['', '', ''],
+          ['', '', '']
+        ]
+      }
+    };
   }
 
   async generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]> {

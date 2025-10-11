@@ -157,7 +157,7 @@ class AIService {
       // For fillable exercises, ensure they have fillableElements
       if (exercise.type === 'fillable') {
         // If fillableElements exists, clean them up
-        if (exercise.fillableElements) {
+        if (exercise.fillableElements && exercise.fillableElements.length > 0) {
           return {
             ...exercise,
             fillableElements: exercise.fillableElements.map((element: any) => ({
@@ -169,7 +169,10 @@ class AIService {
         } else {
           // Generate AI-generated fillableElements for fillable exercises
           try {
+            console.log(`Generating fillable elements for exercise: ${exercise.title}`);
             const fillableElements = await provider.generateFillableElements(text, exercise.objective || exercise.title, locale, settings.ai);
+            console.log(`Generated ${fillableElements.length} fillable elements for: ${exercise.title}`);
+
             return {
               ...exercise,
               fillableElements: fillableElements.map((element: any) => ({
@@ -181,6 +184,8 @@ class AIService {
           } catch (error) {
             console.warn('Failed to generate AI fillable elements, using fallback:', error);
             const fillableElements = this.generateMockTableData(exercise.objective || exercise.title, locale);
+            console.log(`Using fallback fillable element for: ${exercise.title}`);
+
             return {
               ...exercise,
               fillableElements: [fillableElements]
