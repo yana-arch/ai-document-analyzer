@@ -27,6 +27,7 @@ export abstract class BaseAIProvider {
     simulation: number;
     analysis: number;
     application: number;
+    fillable: number;
   }): Promise<Exercise[]>;
 
   // Optional method to test API connectivity
@@ -43,6 +44,7 @@ export abstract class BaseAIProvider {
         exerciseDefaultSimulationExercises: 1,
         exerciseDefaultAnalysisExercises: 1,
         exerciseDefaultApplicationExercises: 1,
+        exerciseDefaultFillableExercises: 1,
         aiPromptPrefix: ''
       });
       return true;

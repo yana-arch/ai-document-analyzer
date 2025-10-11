@@ -53,9 +53,21 @@ export interface ExerciseExample {
   type?: 'text' | 'code' | 'diagram' | 'table';
 }
 
+export interface FillableExercise extends Exercise {
+  type: 'fillable';
+  fillableElements: {
+    id: string;
+    type: 'table' | 'list' | 'schedule' | 'form';
+    data?: any; // Additional structured data for tables, schedules, etc.
+    template?: string; // Template text with placeholders
+  }[];
+}
+
+export type ExerciseType = 'practice' | 'simulation' | 'analysis' | 'application' | 'fillable';
+
 export interface Exercise {
   id: string;
-  type: 'practice' | 'simulation' | 'analysis' | 'application';
+  type: ExerciseType;
   difficulty: DifficultyLevel;
   title: string;
   objective: string;
@@ -78,6 +90,7 @@ export interface AISettings {
   exerciseDefaultSimulationExercises: number;
   exerciseDefaultAnalysisExercises: number;
   exerciseDefaultApplicationExercises: number;
+  exerciseDefaultFillableExercises: number;
   aiPromptPrefix: string;
 }
 

@@ -263,8 +263,9 @@ Document context: ${documentText}`;
     simulation: number;
     analysis: number;
     application: number;
+    fillable: number;
   }): Promise<Exercise[]> {
-    const cacheKey = `gemini-exercises-${exerciseCounts.practice}-${exerciseCounts.simulation}-${exerciseCounts.analysis}-${exerciseCounts.application}-${locale}-${text.length}`;
+    const cacheKey = `gemini-exercises-${exerciseCounts.practice}-${exerciseCounts.simulation}-${exerciseCounts.analysis}-${exerciseCounts.application}-${exerciseCounts.fillable}-${locale}-${text.length}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey);
     }
@@ -282,7 +283,7 @@ Document context: ${documentText}`;
               id: { type: Type.STRING, description: "Unique identifier for the exercise" },
               type: {
                 type: Type.STRING,
-                enum: ["practice", "simulation", "analysis", "application"],
+                enum: ["practice", "simulation", "analysis", "application", "fillable"],
                 description: "Type of exercise"
               },
               difficulty: {
@@ -332,11 +333,49 @@ Document context: ${documentText}`;
 
 Generate exactly:
 - ${exerciseCounts.practice} practice exercises
-- ${exerciseCounts.simulation} simulation exercises  
+- ${exerciseCounts.simulation} simulation exercises
 - ${exerciseCounts.analysis} analysis exercises
 - ${exerciseCounts.application} application exercises
+- ${exerciseCounts.fillable} fillable exercises (tables, forms, scheduling, product backlog creation)
 
 Each exercise should include practical examples and clear instructions like mind maps, role-playing, gap-fill exercises, mini-projects, etc.
+
+For fillable exercises, create interactive exercises where users fill information using these specific structures:
+
+**Table Fillable Element Structure:**
+{
+  "type": "table",
+  "data": {
+    "rows": [["Row1Col1", "Row1Col2"], ["Row2Col1", "Row2Col2"], ["", ""]]  // Pre-filled or empty cells
+  }
+}
+
+**List Fillable Element Structure:**
+{
+  "type": "list",
+  "data": {
+    "items": ["Item 1", "", "", ""]  // Pre-filled items or empty slots
+  }
+}
+
+**Schedule Fillable Element Structure:**
+{
+  "type": "schedule",
+  "data": {
+    "schedule": [["Time", "Activity"], ["9:00", ""], ["10:00", ""], ["11:00", ""]]  // Time-based table
+  }
+}
+
+**Form Fillable Element Structure:**
+{
+  "type": "form",
+  "data": {
+    "fieldList": ["Field 1", "Field 2", "Field 3"],  // Field names
+    "fields": {}  // Leave empty for users to fill
+  }
+}
+
+IMPORTANT: For fillable exercises, provide fillableElements as an array of objects with the above structures. Make sure the data matches exactly what the application expects.
 
 Document: ${text}`;
 

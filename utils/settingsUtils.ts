@@ -14,6 +14,7 @@ export const defaultSettings: UserSettings = {
     exerciseDefaultSimulationExercises: 2,
     exerciseDefaultAnalysisExercises: 1,
     exerciseDefaultApplicationExercises: 1,
+    exerciseDefaultFillableExercises: 1,
     aiPromptPrefix: '',
   },
   ui: {

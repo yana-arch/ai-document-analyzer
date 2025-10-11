@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Exercise, UserSettings } from '../types';
+import { Exercise, UserSettings, FillableExercise } from '../types';
 import { aiService } from '../services/aiService';
+import { ExerciseExportUtils } from '../utils/exportUtils';
+import { renderMarkdown } from '../utils/markdownUtils';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,6 +14,7 @@ interface ExerciseGeneratorProps {
   defaultSimulationExercises?: number;
   defaultAnalysisExercises?: number;
   defaultApplicationExercises?: number;
+  defaultFillableExercises?: number;
 }
 
 const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
@@ -20,20 +23,55 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
   defaultPracticeExercises = 2,
   defaultSimulationExercises = 2,
   defaultAnalysisExercises = 1,
-  defaultApplicationExercises = 1
+  defaultApplicationExercises = 1,
+  defaultFillableExercises = 1
 }) => {
-  const [exercisesState, setExercisesState] = useState<'idle' | 'generating'>('idle');
+  const [exercisesState, setExercisesState] = useState<'idle' | 'generating' | 'exporting'>('idle');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [exportType, setExportType] = useState<string | null>(null);
 
   // Config
   const [practiceCount, setPracticeCount] = useState(defaultPracticeExercises);
   const [simulationCount, setSimulationCount] = useState(defaultSimulationExercises);
   const [analysisCount, setAnalysisCount] = useState(defaultAnalysisExercises);
   const [applicationCount, setApplicationCount] = useState(defaultApplicationExercises);
+  const [fillableCount, setFillableCount] = useState(defaultFillableExercises || 1);
 
   const [score, setScore] = useState({ practice: 0, simulation: 0, analysis: 0, application: 0 });
   const { t, locale } = useLanguage();
+
+  const handleExport = async (format: 'pdf' | 'docx' | 'excel' | 'print') => {
+    if (!exercises.length) return;
+
+    setExercisesState('exporting');
+    setExportType(format);
+
+    try {
+      const filename = `skill-exercises-${new Date().toISOString().split('T')[0]}`;
+
+      switch (format) {
+        case 'pdf':
+          await ExerciseExportUtils.exportToPDF(exercises, filename);
+          break;
+        case 'docx':
+          await ExerciseExportUtils.exportToDOCX(exercises, filename);
+          break;
+        case 'excel':
+          ExerciseExportUtils.exportToExcel(exercises, filename);
+          break;
+        case 'print':
+          ExerciseExportUtils.printExercises(exercises);
+          break;
+      }
+    } catch (error) {
+      console.error(`Export to ${format} failed:`, error);
+      setError(`exercises.error.api`); // General error
+    } finally {
+      setExercisesState('idle');
+      setExportType(null);
+    }
+  };
 
   const handleGenerateExercises = async () => {
     if (practiceCount + simulationCount + analysisCount + applicationCount === 0) {
@@ -48,7 +86,8 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
         practice: practiceCount,
         simulation: simulationCount,
         analysis: analysisCount,
-        application: applicationCount
+        application: applicationCount,
+        fillable: fillableCount
       });
 
       if (generatedExercises && generatedExercises.length > 0) {
@@ -68,7 +107,7 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
       <h4 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300">{t('exercises.idleTitle')}</h4>
       <p className="mt-2 text-zinc-500 dark:text-zinc-400">{t('exercises.idleSubtitle')}</p>
 
-      <div className="mt-8 max-w-sm mx-auto grid grid-cols-2 gap-4">
+      <div className="mt-8 max-w-md mx-auto grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="practice-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('exercises.options.practice')}</label>
           <select
@@ -125,6 +164,20 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
             <option>3</option>
           </select>
         </div>
+        <div className="col-span-2">
+          <label htmlFor="fillable-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('exercises.options.fillable')}</label>
+          <select
+            id="fillable-count"
+            value={fillableCount}
+            onChange={e => setFillableCount(Number(e.target.value))}
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          >
+            <option>0</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+          </select>
+        </div>
       </div>
 
       <button
@@ -152,6 +205,211 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
       default: return 'bg-gray-100 dark:bg-gray-900/20 text-gray-800 dark:text-gray-300';
     }
   };
+
+  const FillableTable = ({ element }: { element: any }) => {
+    const [tableData, setTableData] = useState<string[][]>(
+      element.data?.rows || [['', ''], ['', '']]
+    );
+
+    const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
+      const newData = [...tableData];
+      newData[rowIndex] = [...(newData[rowIndex] || [])];
+      newData[rowIndex][colIndex] = value;
+      setTableData(newData);
+    };
+
+    const addRow = () => {
+      setTableData(prev => [...prev, new Array(tableData[0]?.length || 2).fill('')]);
+    };
+
+    const addColumn = () => {
+      setTableData(prev => prev.map(row => [...row, '']));
+    };
+
+    return (
+      <div className="mb-4">
+        <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
+          📊 {t('exercises.fillable.table')}:
+        </h6>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-zinc-300 dark:border-zinc-600">
+            <tbody>
+              {tableData.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((cell, colIndex) => (
+                    <td key={colIndex} className="border border-zinc-300 dark:border-zinc-600 p-2">
+                      <input
+                        type="text"
+                        value={cell}
+                        onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                        placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
+                        className="w-full px-2 py-1 text-sm border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={addRow}
+            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            {t('exercises.fillable.addRow')}
+          </button>
+          <button
+            onClick={addColumn}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            {t('exercises.fillable.addColumn')}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const FillableList = ({ element }: { element: any }) => {
+    const [listItems, setListItems] = useState<string[]>(element.data?.items || ['', '']);
+
+    const handleItemChange = (index: number, value: string) => {
+      const newItems = [...listItems];
+      newItems[index] = value;
+      setListItems(newItems);
+    };
+
+    const addItem = () => setListItems(prev => [...prev, '']);
+
+    return (
+      <div className="mb-4">
+        <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
+          📝 {t('exercises.fillable.list')}:
+        </h6>
+        <div className="space-y-2">
+          {listItems.map((item, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">- </span>
+              <input
+                type="text"
+                value={item}
+                onChange={(e) => handleItemChange(index, e.target.value)}
+                placeholder={`Item ${index + 1}`}
+                className="flex-1 px-3 py-1 text-sm border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={addItem}
+          className="mt-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          {t('exercises.fillable.addItem')}
+        </button>
+      </div>
+    );
+  };
+
+  const FillableSchedule = ({ element }: { element: any }) => {
+    const [scheduleData, setScheduleData] = useState<string[][]>(
+      element.data?.schedule || [
+        ['Time', 'Activity'],
+        ['9:00', ''],
+        ['10:00', ''],
+        ['11:00', '']
+      ]
+    );
+
+    const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
+      const newData = [...scheduleData];
+      newData[rowIndex] = [...(newData[rowIndex] || [])];
+      newData[rowIndex][colIndex] = value;
+      setScheduleData(newData);
+    };
+
+    return (
+      <div className="mb-4">
+        <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
+          📅 {t('exercises.fillable.schedule')}:
+        </h6>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-zinc-300 dark:border-zinc-600">
+            <tbody>
+              {scheduleData.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((cell, colIndex) => (
+                    <td key={colIndex} className="border border-zinc-300 dark:border-zinc-600 p-2">
+                      <input
+                        type="text"
+                        value={cell}
+                        onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                        className="w-full px-2 py-1 text-sm border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const FillableForm = ({ element }: { element: any }) => {
+    const [formData, setFormData] = useState<Record<string, string>>(element.data?.fields || {});
+
+    const handleFieldChange = (fieldName: string, value: string) => {
+      setFormData(prev => ({ ...prev, [fieldName]: value }));
+    };
+
+    const fields = element.data?.fieldList || ['Field 1', 'Field 2', 'Field 3'];
+
+    return (
+      <div className="mb-4">
+        <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
+          📝 {t('exercises.fillable.form')}:
+        </h6>
+        <div className="space-y-3">
+          {fields.map((field: string, index: number) => (
+            <div key={index}>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                {field}:
+              </label>
+              <input
+                type="text"
+                value={formData[field] || ''}
+                onChange={(e) => handleFieldChange(field, e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFillableExercise = (exercise: FillableExercise) => (
+    <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
+      <h5 className="text-lg font-semibold text-indigo-800 dark:text-indigo-300 mb-4">
+        🎯 {t('exercises.fillable.fillInExercise')}
+      </h5>
+      {exercise.fillableElements && Array.isArray(exercise.fillableElements) && exercise.fillableElements.length > 0 ? (
+        exercise.fillableElements.map((element, index) => (
+          <div key={element.id || index}>
+            {element.type === 'table' && <FillableTable element={element} />}
+            {element.type === 'list' && <FillableList element={element} />}
+            {element.type === 'schedule' && <FillableSchedule element={element} />}
+            {element.type === 'form' && <FillableForm element={element} />}
+          </div>
+        ))
+      ) : (
+        <div className="text-sm text-zinc-600 dark:text-zinc-400">
+          {t('exercises.fillable.noElementsMessage') || 'No fillable elements available for this exercise.'}
+        </div>
+      )}
+    </div>
+  );
 
   const renderExercises = () => (
     <div className="space-y-6">
@@ -210,13 +468,25 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
                         <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded text-xs overflow-x-auto">
                           <code>{example.content}</code>
                         </pre>
-                      ) : example.content}
+                      ) : example.type === 'table' ? (
+                        <div
+                          className="prose prose-sm max-w-none dark:prose-invert prose-headings:mb-2 prose-p:mb-2 prose-headings:text-zinc-800 dark:prose-headings:text-zinc-200"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(example.content) }}
+                        />
+                      ) : (
+                        <div
+                          className="prose prose-sm max-w-none dark:prose-invert prose-headings:mb-2 prose-p:mb-2 prose-headings:text-zinc-800 dark:prose-headings:text-zinc-200"
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(example.content) }}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          {exercise.type === 'fillable' && renderFillableExercise(exercise as FillableExercise)}
 
           {exercise.skills.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -232,12 +502,61 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
     </div>
   );
 
+  const renderExportButtons = () => {
+    if (!exercises.length) return null;
+
+    const buttons = [
+      { key: 'pdf', label: t('exercises.export.pdf'), icon: '📄', format: 'pdf' as const },
+      { key: 'docx', label: t('exercises.export.docx'), icon: '📝', format: 'docx' as const },
+      { key: 'excel', label: t('exercises.export.excel'), icon: '📊', format: 'excel' as const },
+      { key: 'print', label: t('exercises.export.print'), icon: '🖨️', format: 'print' as const },
+    ];
+
+    return (
+      <div className="mt-8 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700">
+        <h5 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 mb-4">
+          💾 {t('exercises.title')} - Export Options
+        </h5>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {buttons.map(({ key, label, icon, format }) => (
+            <button
+              key={key}
+              onClick={() => handleExport(format)}
+              disabled={exercisesState === 'exporting'}
+              className={`flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-lg border transition-all ${
+                exercisesState === 'exporting' && exportType === format
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500'
+              }`}
+            >
+              <span className="text-lg">{icon}</span>
+              <span>{label}</span>
+              {exercisesState === 'exporting' && exportType === format && <Loader />}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (exercisesState) {
       case 'generating':
         return renderGenerating(t('exercises.generating'));
+      case 'exporting':
+        return (
+          <div className="space-y-6">
+            {renderExercises()}
+            {renderExportButtons()}
+          </div>
+        );
       default:
-        return exercises.length > 0 ? renderExercises() : renderIdle();
+        return exercises.length > 0 ? (
+          <div className="space-y-6">
+            {renderExercises()}
+            {renderExportButtons()}
+          </div>
+        ) : renderIdle();
     }
   };
 

@@ -101,6 +101,7 @@ class AIService {
     simulation: number;
     analysis: number;
     application: number;
+    fillable: number;
   }): Promise<Exercise[]> {
     const provider = this.getActiveProvider(settings);
     if (!provider) {

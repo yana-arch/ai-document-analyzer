@@ -43,6 +43,7 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
       defaultSimulationExercises={settings.ai.exerciseDefaultSimulationExercises}
       defaultAnalysisExercises={settings.ai.exerciseDefaultAnalysisExercises}
       defaultApplicationExercises={settings.ai.exerciseDefaultApplicationExercises}
+      defaultFillableExercises={settings.ai.exerciseDefaultFillableExercises}
     />
   );
   const MemoizedTopicsCloud = memo(() => <TopicsCloud topics={analysis.topics} />);

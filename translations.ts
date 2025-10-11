@@ -19,6 +19,7 @@ const translations = {
         simulation: "Simulation",
         analysis: "Analysis",
         application: "Application",
+        fillable: "Fill Information",
       },
       difficulties: {
         beginner: "Beginner",
@@ -30,10 +31,28 @@ const translations = {
         simulation: "Simulation",
         analysis: "Analysis",
         application: "Application",
+        fillable: "Fill Information",
       },
       error: {
         api: "Failed to generate exercises. The AI model might have been unable to create exercises for this text.",
         noExercises: "Please select at least one exercise type to generate."
+      },
+      fillable: {
+        fillInExercise: "Fill In Exercise",
+        table: "Table",
+        list: "List",
+        schedule: "Schedule",
+        form: "Form",
+        addRow: "Add Row",
+        addColumn: "Add Column",
+        addItem: "Add Item",
+        noElementsMessage: "No fillable elements available for this exercise.",
+      },
+      export: {
+        pdf: "Export PDF",
+        docx: "Export Word",
+        excel: "Export Excel",
+        print: "Print"
       },
     },
     loader: {
@@ -132,6 +151,10 @@ const translations = {
         mc: "Multiple Choice",
         written: "Written Answer"
       },
+      totalQuestions: "Total Questions",
+      completed: "Completed",
+      answered: "Answered",
+      finishQuiz: "Finish Quiz",
       writtenPlaceholder: "Type your answer here...",
       yourAnswer: "Your Answer:",
       aiFeedback: "AI Feedback:",
@@ -263,6 +286,10 @@ const translations = {
         api: "Không thể tạo bài kiểm tra. Mô hình AI có thể không tạo được câu hỏi cho văn bản này.",
         noQuestions: "Vui lòng chọn ít nhất một câu hỏi để tạo."
       },
+      totalQuestions: "Tổng số câu hỏi",
+      completed: "Đã hoàn thành",
+      answered: "Đã trả lời",
+      finishQuiz: "Hoàn thành bài kiểm tra",
     },
 
     exercises: {
@@ -278,6 +305,7 @@ const translations = {
         simulation: "Giả lập",
         analysis: "Phân tích",
         application: "Ứng dụng",
+        fillable: "Điền thông tin",
       },
       difficulties: {
         beginner: "Người mới",
@@ -289,10 +317,28 @@ const translations = {
         simulation: "Giả lập",
         analysis: "Phân tích",
         application: "Ứng dụng",
+        fillable: "Điền thông tin",
       },
       error: {
         api: "Không thể tạo bài tập. Mô hình AI có thể không tạo được bài tập cho văn bản này.",
         noExercises: "Vui lòng chọn ít nhất một loại bài tập để tạo."
+      },
+      fillable: {
+        fillInExercise: "Bài Tập Điền Thông Tin",
+        table: "Bảng",
+        list: "Danh sách",
+        schedule: "Lịch trình",
+        form: "Biểu mẫu",
+        addRow: "Thêm hàng",
+        addColumn: "Thêm cột",
+        addItem: "Thêm mục",
+        noElementsMessage: "Không có phần tử có thể điền cho bài tập này.",
+      },
+      export: {
+        pdf: "Xuất PDF",
+        docx: "Xuất Word",
+        excel: "Xuất Excel",
+        print: "In"
       },
     },
     history: {
