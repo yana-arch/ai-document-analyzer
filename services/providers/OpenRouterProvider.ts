@@ -722,4 +722,81 @@ ${text}`;
 
     return exercises.slice(0, 20); // Limit to 20 exercises
   }
+
+  async generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]> {
+    const languageInstruction = locale === 'vi' ? 'Content in Vietnamese.' : 'Content in English.';
+
+    const prompt = `Generate a fillable element based on the document and exercise context. ${languageInstruction}
+
+// Exercise Context: ${exerciseContext}
+// Document: ${documentText}
+
+// Generate one relevant fillable element that matches the exercise. Choose the most appropriate type:
+
+For tables: Use { "type": "table", "data": { "rows": [["Header1", "Header2"], ["Row1Data", "Row2Data"], ["", ""]] } }
+For lists: Use { "type": "list", "data": { "items": ["Item 1", "Item 2", "", "", ""] } }
+For schedules: Use { "type": "schedule", "data": { "schedule": [["Time", "Activity"], ["9:00", ""], ["10:00", ""], ["11:00", ""]] } }
+For forms: Use { "type": "form", "data": { "fieldList": ["Field1", "Field2"], "fields": {} } }
+
+Make it completely relevant to the exercise and document content. Include some pre-filled data where appropriate, but leave blanks for user input.`;
+
+    const messages = [{
+      role: 'user',
+      content: prompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+
+      if (typeof response === 'string') {
+        // Try to parse JSON from natural language
+        try {
+          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const element = JSON.parse(jsonMatch[0]);
+            return [{
+              id: `aigenerated-${Math.random().toString(36).substr(2, 9)}`,
+              ...element
+            }];
+          }
+        } catch (e) {
+          console.warn('Failed to parse fillable element JSON, using fallback');
+        }
+      } else if (response.type && response.data) {
+        // Structured response
+        return [{
+          id: `aigenerated-${Math.random().toString(36).substr(2, 9)}`,
+          type: response.type,
+          data: response.data
+        }];
+      }
+
+      // Fallback
+      return [{
+        id: `fallback-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Field', 'Value'],
+            ['', ''],
+            ['', '']
+          ]
+        }
+      }];
+    } catch (error) {
+      console.error('OpenRouter fillable element generation error:', error);
+      // Fallback
+      return [{
+        id: `fallback-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Field', 'Value'],
+            ['', ''],
+            ['', '']
+          ]
+        }
+      }];
+    }
+  }
 }

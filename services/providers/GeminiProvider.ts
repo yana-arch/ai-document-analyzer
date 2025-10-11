@@ -399,4 +399,69 @@ Document: ${text}`;
       throw new Error("Failed to generate exercises with Gemini.");
     }
   }
+
+  async generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]> {
+    const languageInstruction = locale === 'vi' ? 'Content in Vietnamese.' : 'Content in English.';
+
+    const elementSchema = {
+      type: Type.OBJECT,
+      properties: {
+        type: {
+          type: Type.STRING,
+          enum: ["table", "list", "schedule", "form"],
+          description: "Type of fillable element"
+        },
+        data: {
+          type: Type.OBJECT,
+          description: "Data structure for the element"
+        }
+      },
+      required: ["type", "data"]
+    };
+
+    const prompt = `Generate a fillable element based on the document and exercise context. ${languageInstruction}
+
+// Exercise Context: ${exerciseContext}
+// Document: ${documentText}
+
+// Generate one relevant fillable element that matches the exercise. Use structures like:
+
+For table: { "type": "table", "data": { "rows": [["Header1", "Header2"], ["", ""], ["", ""]] } }
+For list: { "type": "list", "data": { "items": ["Item1", "", "", ""] } }
+For schedule: { "type": "schedule", "data": { "schedule": [["Time", "Activity"], ["9:00", ""], ["10:00", ""]] } }
+For form: { "type": "form", "data": { "fieldList": ["Field1", "Field2"], "fields": {} } }
+
+Make it relevant to the exercise and document content.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: elementSchema,
+        }
+      });
+
+      const element = JSON.parse(response.text.trim());
+      return [{
+        id: `aigenerated-${Math.random().toString(36).substr(2, 9)}`,
+        ...element
+      }];
+    } catch (error) {
+      console.error("Gemini fillable element generation error:", error);
+      // Fallback to simple table
+      return [{
+        id: `fallback-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Field', 'Value'],
+            ['', ''],
+            ['', '']
+          ]
+        }
+      }];
+    }
+  }
 }

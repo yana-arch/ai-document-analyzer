@@ -111,6 +111,47 @@ class AIService {
 
     const rawExercises = await provider.generateExercises(text, locale, exerciseCounts);
 
+    // Post-process exercises to handle AI putting fillable elements in examples instead of fillableElements
+    rawExercises.forEach((exercise: any) => {
+      if (exercise.type === 'fillable' && (!exercise.fillableElements || exercise.fillableElements.length === 0)) {
+        // Look for table examples in fillable exercises without fillableElements
+        const tableExamples = exercise.examples?.filter((ex: any) => ex.type === 'table') || [];
+        if (tableExamples.length > 0) {
+          // Convert table examples to fillable elements
+          const fillableElements = tableExamples.map((ex: any) => {
+            try {
+              // Parse markdown table content to extract rows
+              const lines = ex.content.split('\n')
+                .map((line: string) => line.trim())
+                .filter((line: string) => line && !line.startsWith('---') && !line.startsWith('| ---'));
+
+              const rows: string[][] = lines
+                .map((line: string) => line.split('|').slice(1, -1).map((cell: string) => cell.trim()))
+                .filter((row: string[]) => row.length > 0);
+
+              if (rows.length > 0) {
+                return {
+                  id: `from-example-${Math.random().toString(36).substr(2, 9)}`,
+                  type: 'table',
+                  data: { rows }
+                };
+              }
+            } catch (error) {
+              console.warn('Failed to parse table from example:', error);
+            }
+            return null;
+          }).filter((element: any) => element);
+
+          if (fillableElements.length > 0) {
+            exercise.fillableElements = fillableElements;
+            // Remove the table examples since they're now in fillableElements
+            exercise.examples = exercise.examples.filter((ex: any) => ex.type !== 'table');
+            console.log(`Extracted ${fillableElements.length} fillable elements from examples for exercise: ${exercise.title}`);
+          }
+        }
+      }
+    });
+
     // Process exercises and ensure proper typing and fillable elements
     const processedExercises = await Promise.all(rawExercises.map(async (exercise: any) => {
       // For fillable exercises, ensure they have fillableElements
@@ -126,12 +167,25 @@ class AIService {
             }))
           } as Exercise;
         } else {
-          // Generate context-aware mock fillableElements for fillable exercises
-          const fillableElements = this.generateMockTableData(exercise.objective || exercise.title, locale);
-          return {
-            ...exercise,
-            fillableElements: [fillableElements]
-          } as Exercise;
+          // Generate AI-generated fillableElements for fillable exercises
+          try {
+            const fillableElements = await provider.generateFillableElements(text, exercise.objective || exercise.title, locale, settings.ai);
+            return {
+              ...exercise,
+              fillableElements: fillableElements.map((element: any) => ({
+                id: element.id || `ai-element-${Math.random().toString(36).substr(2, 9)}`,
+                type: element.type || 'table',
+                data: element.data || {}
+              }))
+            } as Exercise;
+          } catch (error) {
+            console.warn('Failed to generate AI fillable elements, using fallback:', error);
+            const fillableElements = this.generateMockTableData(exercise.objective || exercise.title, locale);
+            return {
+              ...exercise,
+              fillableElements: [fillableElements]
+            } as Exercise;
+          }
         }
       }
 

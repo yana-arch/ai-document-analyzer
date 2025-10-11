@@ -30,6 +30,8 @@ export abstract class BaseAIProvider {
     fillable: number;
   }): Promise<any[]>;
 
+  abstract generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]>;
+
   // Optional method to test API connectivity
   async testConnection(): Promise<boolean> {
     try {
