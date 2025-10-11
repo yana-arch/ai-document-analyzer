@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 // Lazy load heavy components
 const QnAChat = lazy(() => import('./QnAChat'));
 const QuizGenerator = lazy(() => import('./QuizGenerator'));
+const ExerciseGenerator = lazy(() => import('./ExerciseGenerator'));
 
 interface AnalysisDashboardProps {
   analysis: AnalysisResult;
@@ -34,6 +35,16 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
       defaultWrittenQuestions={settings.ai.quizDefaultWrittenQuestions}
     />
   );
+  const MemoizedExerciseGenerator = memo(() =>
+    <ExerciseGenerator
+      documentText={documentText}
+      settings={settings}
+      defaultPracticeExercises={settings.ai.exerciseDefaultPracticeExercises}
+      defaultSimulationExercises={settings.ai.exerciseDefaultSimulationExercises}
+      defaultAnalysisExercises={settings.ai.exerciseDefaultAnalysisExercises}
+      defaultApplicationExercises={settings.ai.exerciseDefaultApplicationExercises}
+    />
+  );
   const MemoizedTopicsCloud = memo(() => <TopicsCloud topics={analysis.topics} />);
   const MemoizedEntityExtractor = memo(() => <EntityExtractor entities={analysis.entities} sentiment={analysis.sentiment} />);
 
@@ -55,6 +66,9 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
           </Suspense>
           <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Quiz...</span></div>}>
             <MemoizedQuizGenerator />
+          </Suspense>
+          <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Exercises...</span></div>}>
+            <MemoizedExerciseGenerator />
           </Suspense>
         </div>
         <div className="space-y-6">

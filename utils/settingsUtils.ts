@@ -10,6 +10,10 @@ export const defaultSettings: UserSettings = {
     maxTopicsCount: 10,
     quizDefaultMCQuestions: 5,
     quizDefaultWrittenQuestions: 2,
+    exerciseDefaultPracticeExercises: 2,
+    exerciseDefaultSimulationExercises: 2,
+    exerciseDefaultAnalysisExercises: 1,
+    exerciseDefaultApplicationExercises: 1,
     aiPromptPrefix: '',
   },
   ui: {

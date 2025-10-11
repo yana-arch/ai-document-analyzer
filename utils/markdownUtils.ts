@@ -5,7 +5,7 @@ const md = new MarkdownIt({
   html: false, // Don't allow HTML in markdown for security
   linkify: true,
   typographer: true,
-  breaks: false, // Dont convert \n to <br>
+  breaks: true, // Convert \n to <br>
   highlight: function (str, lang) {
     // Simple code block with copy functionality
     const language = lang ? `language-${lang}` : '';

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, AISettings } from '../../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, MultipleChoiceQuestion, WrittenAnswerQuestion, AISettings } from '../../types';
 import { BaseAIProvider } from './BaseAIProvider';
 
 export class OpenRouterProvider extends BaseAIProvider {
@@ -543,5 +543,183 @@ Please respond with a score (0-5) and detailed feedback on why this answer recei
         ? 'Đã hoàn thành việc chấm bài.'
         : 'Answer graded successfully.'
     };
+  }
+
+  async generateExercises(text: string, locale: 'en' | 'vi', exerciseCounts: {
+    practice: number;
+    simulation: number;
+    analysis: number;
+    application: number;
+  }): Promise<any[]> {
+    const cacheKey = `openrouter-exercises-${exerciseCounts.practice}-${exerciseCounts.simulation}-${exerciseCounts.analysis}-${exerciseCounts.application}-${locale}-${this.model}-${text.length}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    const languageInstruction = locale === 'vi' ? 'Please create exercises in Vietnamese.' : 'Please create exercises in English.';
+
+    const prompt = `Create practical exercises to help someone learn and apply concepts from this document.
+
+Create exactly:
+- ${exerciseCounts.practice} practice exercises (hands-on activities, mapping, flashcards, gap-fill exercises)
+- ${exerciseCounts.simulation} simulation exercises (role-playing, scenario-based activities)
+- ${exerciseCounts.analysis} analysis exercises (evaluation, critique, pattern recognition)
+- ${exerciseCounts.application} application exercises (real-world project applications, case studies)
+
+${languageInstruction}
+
+For each exercise, please include:
+- Exercise title
+- Difficulty level (beginner/intermediate/advanced)
+- Learning objective
+- Step-by-step instructions
+- 1-3 practical examples
+- Key skills developed
+- Estimated time to complete
+
+Format each exercise clearly, separating them with ---.
+
+Document content:
+${text}`;
+
+    const messages = [{
+      role: 'user',
+      content: prompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, false);
+
+      if (typeof response === 'string') {
+        const exercises = this.parseNaturalLanguageExercises(response);
+        this.cache.set(cacheKey, exercises);
+        return exercises;
+      } else {
+        // Try to use structured data if available
+        return response.exercises || [];
+      }
+    } catch (error) {
+      console.error('OpenRouter exercises generation error:', error);
+      throw new Error('Failed to generate exercises with OpenRouter.');
+    }
+  }
+
+  // Parse natural language exercise responses
+  private parseNaturalLanguageExercises(content: string): any[] {
+    const exercises: any[] = [];
+    const sections = content.split(/---+/).map(s => s.trim()).filter(s => s.length > 0);
+
+    for (const section of sections) {
+      const lines = section.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      if (lines.length < 3) continue; // Need at least title, objective, some instructions
+
+      let exercise: any = {
+        id: `exercise-${exercises.length + 1}`,
+        type: 'practice', // Default, will be determined from content
+        difficulty: 'intermediate', // Default
+        title: '',
+        objective: '',
+        instructions: [],
+        examples: [],
+        skills: [],
+        estimatedTime: '15-30 minutes'
+      };
+
+      let currentField = '';
+      let examplesText = '';
+
+      for (const line of lines) {
+        // Title detection (usually first line and bold/shorter)
+        if (!exercise.title && (line.includes('**') || line.length < 100)) {
+          exercise.title = line.replace(/\*{1,2}/g, '').trim();
+          continue;
+        }
+
+        // Difficulty detection
+        const difficultyMatch = line.match(/(beginner|intermediate|advanced|nhân viên mới|trung cấp|nâng cao)/i);
+        if (difficultyMatch) {
+          const diff = difficultyMatch[1].toLowerCase();
+          exercise.difficulty = diff.includes('nhân viên mới') || diff.includes('beginner') ? 'beginner' :
+                               diff.includes('nâng cao') || diff.includes('advanced') ? 'advanced' : 'intermediate';
+          continue;
+        }
+
+        // Objective detection
+        if (line.match(/\*{0,2}(objective|mục tiêu):?\*{0,2}/i)) {
+          currentField = 'objective';
+          continue;
+        }
+
+        // Instructions detection
+        if (line.match(/\*{0,2}(instructions|hướng dẫn):?\*{0,2}/i)) {
+          currentField = 'instructions';
+          continue;
+        }
+
+        // Examples detection
+        if (line.match(/\*{0,2}(examples|ví dụ):?\*{0,2}/i)) {
+          currentField = 'examples';
+          continue;
+        }
+
+        // Skills detection
+        if (line.match(/\*{0,2}(skills|kỹ năng):?\*{0,2}/i)) {
+          currentField = 'skills';
+          continue;
+        }
+
+        // Time detection
+        if (line.match(/\*{0,2}(time|thời gian):?\*{0,2}/i)) {
+          currentField = 'time';
+          continue;
+        }
+
+        // Content processing based on current field
+        if (currentField === 'objective' && exercise.objective === '') {
+          exercise.objective = line;
+        } else if (currentField === 'instructions') {
+          if (line.match(/^\d+\./) || line.match(/^[•\-\*]/)) {
+            exercise.instructions.push(line.replace(/^\d+\.\s*|^[•\-\*\s]/, '').trim());
+          }
+        } else if (currentField === 'examples') {
+          examplesText += line + '\n';
+        } else if (currentField === 'skills') {
+          const skills = line.split(/[,;]/).map(s => s.trim()).filter(s => s.length > 0);
+          exercise.skills.push(...skills);
+        } else if (currentField === 'time' && exercise.estimatedTime === '15-30 minutes') {
+          exercise.estimatedTime = line;
+        }
+
+        // Type detection from content keywords
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.includes('simulation') || lowerLine.includes('giả lập') || lowerLine.includes('role') || lowerLine.includes('scenario')) {
+          exercise.type = 'simulation';
+        } else if (lowerLine.includes('analysis') || lowerLine.includes('phân tích') || lowerLine.includes('critique') || lowerLine.includes('evaluate')) {
+          exercise.type = 'analysis';
+        } else if (lowerLine.includes('application') || lowerLine.includes('apply') || lowerLine.includes('real-world') || lowerLine.includes('project')) {
+          exercise.type = 'application';
+        } else if (lowerLine.includes('practice') || lowerLine.includes('mapping') || lowerLine.includes('flashcard') || lowerLine.includes('gap-fill')) {
+          exercise.type = 'practice';
+        }
+      }
+
+      // Process examples
+      if (examplesText.trim()) {
+        const exampleBlocks = examplesText.split(/\n\n+/).filter(e => e.trim().length > 10);
+        exercise.examples = exampleBlocks.map((block, i) => ({
+          title: `Example ${i + 1}`,
+          content: block.trim(),
+          type: 'text' as const
+        }));
+      }
+
+      // Ensure we have minimum required fields
+      if (exercise.title && exercise.objective && exercise.instructions.length > 0) {
+        exercises.push(exercise);
+      }
+    }
+
+    return exercises.slice(0, 20); // Limit to 20 exercises
   }
 }

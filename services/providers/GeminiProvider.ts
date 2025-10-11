@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, AISettings } from '../../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, Exercise, AISettings } from '../../types';
 import { BaseAIProvider } from './BaseAIProvider';
 
 // Retry utility with exponential backoff
@@ -255,6 +255,108 @@ Document context: ${documentText}`;
     } catch (error) {
       console.error("Gemini grading error:", error);
       return { score: 0, maxScore: 5, feedback: "Error grading answer." };
+    }
+  }
+
+  async generateExercises(text: string, locale: 'en' | 'vi', exerciseCounts: {
+    practice: number;
+    simulation: number;
+    analysis: number;
+    application: number;
+  }): Promise<Exercise[]> {
+    const cacheKey = `gemini-exercises-${exerciseCounts.practice}-${exerciseCounts.simulation}-${exerciseCounts.analysis}-${exerciseCounts.application}-${locale}-${text.length}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    const languageInstruction = locale === 'vi' ? 'Exercises in Vietnamese.' : 'Exercises in English.';
+
+    const exercisesSchema = {
+      type: Type.OBJECT,
+      properties: {
+        exercises: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING, description: "Unique identifier for the exercise" },
+              type: {
+                type: Type.STRING,
+                enum: ["practice", "simulation", "analysis", "application"],
+                description: "Type of exercise"
+              },
+              difficulty: {
+                type: Type.STRING,
+                enum: ["beginner", "intermediate", "advanced"],
+                description: "Difficulty level"
+              },
+              title: { type: Type.STRING, description: "Exercise title" },
+              objective: { type: Type.STRING, description: "Learning objective" },
+              instructions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Step-by-step instructions"
+              },
+              examples: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING, description: "Example title" },
+                    content: { type: Type.STRING, description: "Example content" },
+                    type: {
+                      type: Type.STRING,
+                      enum: ["text", "code", "diagram", "table"],
+                      description: "Content type"
+                    }
+                  }
+                },
+                description: "Examples with title and content"
+              },
+              skills: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Skills being developed"
+              },
+              estimatedTime: { type: Type.STRING, description: "Estimated completion time" }
+            },
+            required: ["id", "type", "difficulty", "title", "objective", "instructions", "examples", "skills"]
+          },
+          description: "List of exercises"
+        }
+      },
+      required: ["exercises"]
+    };
+
+    const prompt = `Generate exercises from this document. ${languageInstruction}
+
+Generate exactly:
+- ${exerciseCounts.practice} practice exercises
+- ${exerciseCounts.simulation} simulation exercises  
+- ${exerciseCounts.analysis} analysis exercises
+- ${exerciseCounts.application} application exercises
+
+Each exercise should include practical examples and clear instructions like mind maps, role-playing, gap-fill exercises, mini-projects, etc.
+
+Document: ${text}`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: exercisesSchema,
+        }
+      });
+
+      const data = JSON.parse(response.text.trim());
+      const result = data.exercises || [];
+      this.cache.set(cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error("Gemini exercises generation error:", error);
+      throw new Error("Failed to generate exercises with Gemini.");
     }
   }
 }

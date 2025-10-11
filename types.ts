@@ -45,6 +45,26 @@ export interface GradedWrittenAnswer {
   feedback: string;
 }
 
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export interface ExerciseExample {
+  title?: string;
+  content: string;
+  type?: 'text' | 'code' | 'diagram' | 'table';
+}
+
+export interface Exercise {
+  id: string;
+  type: 'practice' | 'simulation' | 'analysis' | 'application';
+  difficulty: DifficultyLevel;
+  title: string;
+  objective: string;
+  instructions: string[];
+  examples: ExerciseExample[];
+  skills: string[];
+  estimatedTime?: string;
+}
+
 export type LanguageStyle = 'formal' | 'conversational' | 'technical' | 'simplified';
 export type SummaryLength = 'short' | 'medium' | 'long';
 
@@ -54,6 +74,10 @@ export interface AISettings {
   maxTopicsCount: number;
   quizDefaultMCQuestions: number;
   quizDefaultWrittenQuestions: number;
+  exerciseDefaultPracticeExercises: number;
+  exerciseDefaultSimulationExercises: number;
+  exerciseDefaultAnalysisExercises: number;
+  exerciseDefaultApplicationExercises: number;
   aiPromptPrefix: string;
 }
 

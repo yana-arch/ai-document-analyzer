@@ -1,4 +1,4 @@
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, ChatMessage, UserSettings, APIConfiguration } from '../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, ChatMessage, UserSettings, APIConfiguration } from '../types';
 import { decryptApiKey } from '../utils/apiKeyUtils';
 import { GeminiProvider } from './providers/GeminiProvider';
 import { OpenRouterProvider } from './providers/OpenRouterProvider';
@@ -94,6 +94,20 @@ class AIService {
     }
 
     return provider.gradeWrittenAnswer(documentText, question, userAnswer, locale);
+  }
+
+  async generateExercises(text: string, locale: 'en' | 'vi', settings: UserSettings, exerciseCounts: {
+    practice: number;
+    simulation: number;
+    analysis: number;
+    application: number;
+  }): Promise<Exercise[]> {
+    const provider = this.getActiveProvider(settings);
+    if (!provider) {
+      throw new Error('No active AI provider configured.');
+    }
+
+    return provider.generateExercises(text, locale, exerciseCounts);
   }
 
   async testActiveProvider(settings: UserSettings): Promise<{ success: boolean; message: string }> {

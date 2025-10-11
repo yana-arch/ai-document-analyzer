@@ -1,4 +1,4 @@
-import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, AISettings } from '../../types';
+import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, Exercise, AISettings } from '../../types';
 
 export abstract class BaseAIProvider {
   protected providerName: string;
@@ -22,6 +22,13 @@ export abstract class BaseAIProvider {
     locale: 'en' | 'vi'
   ): Promise<GradedWrittenAnswer>;
 
+  abstract generateExercises(text: string, locale: 'en' | 'vi', exerciseCounts: {
+    practice: number;
+    simulation: number;
+    analysis: number;
+    application: number;
+  }): Promise<Exercise[]>;
+
   // Optional method to test API connectivity
   async testConnection(): Promise<boolean> {
     try {
@@ -32,6 +39,10 @@ export abstract class BaseAIProvider {
         maxTopicsCount: 5,
         quizDefaultMCQuestions: 1,
         quizDefaultWrittenQuestions: 0,
+        exerciseDefaultPracticeExercises: 1,
+        exerciseDefaultSimulationExercises: 1,
+        exerciseDefaultAnalysisExercises: 1,
+        exerciseDefaultApplicationExercises: 1,
         aiPromptPrefix: ''
       });
       return true;

@@ -5,6 +5,37 @@ const translations = {
       analyzeAnother: "Analyze Another Document",
       settingsTooltip: "Settings",
     },
+
+    exercises: {
+      title: "Skill Exercises",
+      idleTitle: "Generate practical exercises",
+      idleSubtitle: "Create interactive exercises to develop practical skills from the document.",
+      generateButton: "Generate Exercises",
+      generating: "Creating exercises...",
+      instructions: "Instructions",
+      examples: "Examples",
+      types: {
+        practice: "Practice",
+        simulation: "Simulation",
+        analysis: "Analysis",
+        application: "Application",
+      },
+      difficulties: {
+        beginner: "Beginner",
+        intermediate: "Intermediate",
+        advanced: "Advanced",
+      },
+      options: {
+        practice: "Practice",
+        simulation: "Simulation",
+        analysis: "Analysis",
+        application: "Application",
+      },
+      error: {
+        api: "Failed to generate exercises. The AI model might have been unable to create exercises for this text.",
+        noExercises: "Please select at least one exercise type to generate."
+      },
+    },
     loader: {
       analyzing: "Analyzing document... this may take a moment.",
     },
@@ -210,29 +241,59 @@ const translations = {
       generateButton: "Tạo bài kiểm tra",
       generating: "Đang tạo bài kiểm tra của bạn...",
       grading: "Đang chấm điểm câu trả lời của bạn...",
-      question: "Câu hỏi",
-      of: "trên",
       previous: "Trước",
       next: "Tiếp theo",
       finish: "Hoàn thành",
       completeTitle: "Đã hoàn thành bài kiểm tra!",
-      score: "Bạn đã đạt",
-      totalScore: "Tổng điểm:",
+      totalScore: "Tổng điểm của bạn:",
       outOf: "trên",
-      explanation: "Giải thích:",
+      question: "Câu hỏi",
+      of: "trên",
+      options: {
+        mc: "Trắc nghiệm",
+        written: "Tự luận",
+      },
+      writtenPlaceholder: "Viết câu trả lời của bạn vào đây...",
+      yourAnswer: "Câu trả lời của bạn",
+      aiFeedback: "Phản hồi từ AI",
+      explanation: "Giải thích",
+      noAnswer: "Không có câu trả lời được cung cấp",
       retake: "Làm lại bài kiểm tra",
       error: {
         api: "Không thể tạo bài kiểm tra. Mô hình AI có thể không tạo được câu hỏi cho văn bản này.",
         noQuestions: "Vui lòng chọn ít nhất một câu hỏi để tạo."
       },
-      options: {
-        mc: "Trắc nghiệm",
-        written: "Tự luận"
+    },
+
+    exercises: {
+      title: "Bài tập kỹ năng",
+      idleTitle: "Tạo bài tập thực hành",
+      idleSubtitle: "Tạo các bài tập tương tác để phát triển kỹ năng thực hành từ tài liệu.",
+      generateButton: "Tạo bài tập",
+      generating: "Đang tạo bài tập...",
+      instructions: "Hướng dẫn",
+      examples: "Ví dụ",
+      types: {
+        practice: "Thực hành",
+        simulation: "Giả lập",
+        analysis: "Phân tích",
+        application: "Ứng dụng",
       },
-      writtenPlaceholder: "Nhập câu trả lời của bạn vào đây...",
-      yourAnswer: "Câu trả lời của bạn:",
-      aiFeedback: "Phản hồi từ AI:",
-      noAnswer: "(Không có câu trả lời)"
+      difficulties: {
+        beginner: "Người mới",
+        intermediate: "Trung cấp",
+        advanced: "Nâng cao",
+      },
+      options: {
+        practice: "Thực hành",
+        simulation: "Giả lập",
+        analysis: "Phân tích",
+        application: "Ứng dụng",
+      },
+      error: {
+        api: "Không thể tạo bài tập. Mô hình AI có thể không tạo được bài tập cho văn bản này.",
+        noExercises: "Vui lòng chọn ít nhất một loại bài tập để tạo."
+      },
     },
     history: {
       title: "Đã phân tích trước đây",
