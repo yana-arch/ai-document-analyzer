@@ -207,9 +207,58 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
   };
 
   const FillableTable = ({ element }: { element: any }) => {
-    const [tableData, setTableData] = useState<string[][]>(
-      element.data?.rows || [['', ''], ['', '']]
-    );
+    // Convert different JSON formats to table structure
+    const convertToTableData = () => {
+      // If data has direct rows, use them
+      if (element.data?.rows && Array.isArray(element.data.rows)) {
+        return element.data.rows;
+      }
+
+      // Handle form structure with fieldList and fields (like backlog)
+      if (element.data?.fieldList && element.data?.fields) {
+        const headers = ['Field', 'Value']; // Standard headers for key-value pairs
+        const rows = element.data.fieldList.map((field: string) => [
+          field,
+          element.data.fields[field] || ''
+        ]);
+        return [headers, ...rows];
+      }
+
+      // Handle schedule format
+      if (element.data?.schedule && Array.isArray(element.data.schedule)) {
+        return element.data.schedule;
+      }
+
+      // Handle list format
+      if (element.data?.items && Array.isArray(element.data.items)) {
+        return [['Item']].concat(element.data.items.map((item: string) => [item]));
+      }
+
+      // Handle generic object - convert key-value pairs to table
+      if (element.data && typeof element.data === 'object' && !Array.isArray(element.data)) {
+        const entries = Object.entries(element.data);
+        if (entries.length > 0) {
+          const headers = Object.keys(entries[0][1] as any) || ['Key', 'Value'];
+          const rows = entries.map(([key, value]: [string, any]) => {
+            if (typeof value === 'object') {
+              return headers.map(header => value[header] || '');
+            }
+            return [key, String(value)];
+          });
+          return [headers, ...rows];
+        }
+      }
+
+      // Provide sample template if no data is available
+      return [
+        ['Sample Field', 'Sample Data'],
+        ['Field 1', ''],
+        ['Field 2', ''],
+        ['Field 3', '']
+      ];
+    };
+
+    const [tableData, setTableData] = useState<string[][]>(convertToTableData());
 
     const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
       const newData = [...tableData];
@@ -226,11 +275,33 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
       setTableData(prev => prev.map(row => [...row, '']));
     };
 
+    const getElementTypeDisplay = () => {
+      switch (element.type) {
+        case 'table': return '📊 Table';
+        case 'schedule': return '📅 Schedule';
+        case 'form': return '📝 Form';
+        case 'list': return '📋 List';
+        default: return '📊 Data Table';
+      }
+    };
+
     return (
       <div className="mb-4">
         <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
-          📊 {t('exercises.fillable.table')}:
+          {getElementTypeDisplay()}:
         </h6>
+        {/* Display the JSON structure above the table for reference */}
+        <details className="mb-3">
+          <summary className="text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer hover:text-zinc-800 dark:hover:text-zinc-200">
+            Show JSON Structure (for reference)
+          </summary>
+          <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded text-xs text-zinc-700 dark:text-zinc-300 overflow-x-auto mt-1">
+            {JSON.stringify({
+              "type": element.type,
+              "data": element.data || {}
+            }, null, 2)}
+          </pre>
+        </details>
         <div className="overflow-x-auto">
           <table className="min-w-full border border-zinc-300 dark:border-zinc-600">
             <tbody>
@@ -243,7 +314,11 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
                         value={cell}
                         onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                         placeholder={`Row ${rowIndex + 1}, Col ${colIndex + 1}`}
-                        className="w-full px-2 py-1 text-sm border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+                        className={`w-full px-2 py-1 text-sm border-none rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                          rowIndex === 0 ?
+                            'bg-indigo-50 dark:bg-indigo-900/20 font-medium' :
+                            'bg-transparent'
+                        }`}
                       />
                     </td>
                   ))}
@@ -311,14 +386,21 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
   };
 
   const FillableSchedule = ({ element }: { element: any }) => {
-    const [scheduleData, setScheduleData] = useState<string[][]>(
-      element.data?.schedule || [
+    // Check if we have schedule data from the element, otherwise use default
+    const getScheduleData = () => {
+      if (element.data?.schedule && Array.isArray(element.data.schedule) && element.data.schedule.length > 0) {
+        return element.data.schedule;
+      }
+      // Default schedule template for daily activities
+      return [
         ['Time', 'Activity'],
         ['9:00', ''],
         ['10:00', ''],
         ['11:00', '']
-      ]
-    );
+      ];
+    };
+
+    const [scheduleData, setScheduleData] = useState<string[][]>(getScheduleData());
 
     const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
       const newData = [...scheduleData];
@@ -370,21 +452,17 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
         <h6 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
           📝 {t('exercises.fillable.form')}:
         </h6>
-        <div className="space-y-3">
-          {fields.map((field: string, index: number) => (
-            <div key={index}>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                {field}:
-              </label>
-              <input
-                type="text"
-                value={formData[field] || ''}
-                onChange={(e) => handleFieldChange(field, e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          ))}
-        </div>
+        {/* Display form data as JSON instead of form inputs */}
+        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded text-sm text-zinc-700 dark:text-zinc-300 overflow-x-auto">
+          {JSON.stringify(
+            {
+              "type": "form",
+              "data": element.data || {}
+            },
+            null,
+            2
+          )}
+        </pre>
       </div>
     );
   };
@@ -489,7 +567,7 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
           {exercise.type === 'fillable' && renderFillableExercise(exercise as FillableExercise)}
 
           {exercise.skills.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {exercise.skills.map((skill, i) => (
                 <span key={i} className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">
                   #{skill}

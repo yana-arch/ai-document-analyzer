@@ -28,7 +28,7 @@ export abstract class BaseAIProvider {
     analysis: number;
     application: number;
     fillable: number;
-  }): Promise<Exercise[]>;
+  }): Promise<any[]>;
 
   // Optional method to test API connectivity
   async testConnection(): Promise<boolean> {

@@ -30,12 +30,24 @@ md.renderer.rules.text = function(tokens, idx, options, env, self) {
 };
 
 // Render markdown to HTML
-export function renderMarkdown(text: string): string {
+export function renderMarkdown(text: string | object): string {
   try {
-    return md.render(text);
+    // Handle case where text is an object (e.g., { text: "..." })
+    let content = text;
+    if (typeof text === 'object' && text !== null && 'text' in text) {
+      content = (text as any).text;
+    }
+
+    // Ensure content is a string
+    if (typeof content !== 'string') {
+      console.warn('Expected string content, got:', typeof content, content);
+      content = String(content);
+    }
+
+    return md.render(content);
   } catch (error) {
     console.error('Markdown rendering error:', error);
-    return text; // Fallback to plain text
+    return String(text); // Fallback to string representation
   }
 }
 

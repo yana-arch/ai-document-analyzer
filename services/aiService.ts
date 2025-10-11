@@ -6,6 +6,7 @@ import { BaseAIProvider } from './providers/BaseAIProvider';
 
 class AIService {
   private providers: Map<string, BaseAIProvider> = new Map();
+  private cache: Map<string, any> = new Map();
 
   constructor() {
     // Initialize with empty providers - they'll be loaded from settings
@@ -108,7 +109,138 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.generateExercises(text, locale, exerciseCounts);
+    const rawExercises = await provider.generateExercises(text, locale, exerciseCounts);
+
+    // Process exercises and ensure proper typing and fillable elements
+    const processedExercises = await Promise.all(rawExercises.map(async (exercise: any) => {
+      // For fillable exercises, ensure they have fillableElements
+      if (exercise.type === 'fillable') {
+        // If fillableElements exists, clean them up
+        if (exercise.fillableElements) {
+          return {
+            ...exercise,
+            fillableElements: exercise.fillableElements.map((element: any) => ({
+              id: element.id || `element-${Math.random().toString(36).substr(2, 9)}`,
+              type: element.type || 'table',
+              data: element.data || {}
+            }))
+          } as Exercise;
+        } else {
+          // Generate context-aware mock fillableElements for fillable exercises
+          const fillableElements = this.generateMockTableData(exercise.objective || exercise.title, locale);
+          return {
+            ...exercise,
+            fillableElements: [fillableElements]
+          } as Exercise;
+        }
+      }
+
+      return exercise as Exercise;
+    }));
+
+    return processedExercises;
+  }
+
+  generateMockTableData(context: string, locale: 'en' | 'vi'): any {
+    // Generate table based on exercise context keywords
+    const lowerContext = context.toLowerCase();
+
+    // Scrum/Agile related exercises
+    if (lowerContext.includes('scrum') || lowerContext.includes('sprint') || lowerContext.includes('backlog')) {
+      return {
+        id: `tablet-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Backlog Item', 'Priority', 'Story Points', 'Acceptance Criteria'],
+            ['User login feature', 'High', '', ''],
+            ['Password reset', 'Medium', '', ''],
+            ['Dashboard UI', 'Low', '', '']
+          ]
+        }
+      };
+    }
+
+    // Planning/Scheduling exercises
+    if (lowerContext.includes('planning') || lowerContext.includes('schedule') || lowerContext.includes('timeline')) {
+      return {
+        id: `schedulet-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Week', 'Activities', 'Deliverables'],
+            ['Week 1', '', ''],
+            ['Week 2', '', ''],
+            ['Week 3', '', ''],
+            ['Week 4', '', '']
+          ]
+        }
+      };
+    }
+
+    // Analysis/Comparison exercises
+    if (lowerContext.includes('analysis') || lowerContext.includes('comparison') || lowerContext.includes('evaluation')) {
+      return {
+        id: `analysist-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Criteria', 'Option A', 'Option B', 'Recommendation'],
+            ['Cost', '', '', ''],
+            ['Timeline', '', '', ''],
+            ['Quality', '', '', ''],
+            ['Risk', '', '', '']
+          ]
+        }
+      };
+    }
+
+    // Problem-solving exercises
+    if (lowerContext.includes('problem') || lowerContext.includes('solution') || lowerContext.includes('troubleshoot')) {
+      return {
+        id: `problemst-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Problem', 'Root Cause', 'Solution', 'Priority'],
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', '']
+          ]
+        }
+      };
+    }
+
+    // Requirements/List exercises
+    if (lowerContext.includes('requirement') || lowerContext.includes('list') || lowerContext.includes('specifications')) {
+      return {
+        id: `listt-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'table',
+        data: {
+          rows: [
+            ['Requirement', 'Description', 'Priority', 'Status'],
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', '']
+          ]
+        }
+      };
+    }
+
+    // Default general table
+    return {
+      id: `generalt-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'table',
+      data: {
+        rows: [
+          ['Item', 'Details', 'Status'],
+          ['', '', ''],
+          ['', '', ''],
+          ['', '', '']
+        ]
+      }
+    };
   }
 
   async testActiveProvider(settings: UserSettings): Promise<{ success: boolean; message: string }> {

@@ -114,6 +114,55 @@ export class ExerciseExportUtils {
           yPosition += skillsLines.length * 6 + 15;
         }
 
+        // Fillable elements (only for fillable exercises)
+        if (exercise.type === 'fillable' && 'fillableElements' in exercise && (exercise as any).fillableElements?.length > 0) {
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          pdf.setFontSize(12);
+          pdf.setFont('bold');
+          pdf.text('Fillable Elements:', margin, yPosition);
+          yPosition += 8;
+          pdf.setFont('normal');
+
+          const fillableElements = (exercise as any).fillableElements;
+          fillableElements.forEach((element: any, elemIndex: number) => {
+            if (yPosition > 270) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+
+            pdf.setFont('bold');
+            pdf.text(`${element.type.charAt(0).toUpperCase() + element.type.slice(1)}:`, margin + 5, yPosition);
+            yPosition += 6;
+            pdf.setFont('normal');
+
+            if (element.type === 'form' && element.data) {
+              const jsonData = JSON.stringify({ "type": "form", "data": element.data }, null, 2);
+              const jsonLines = pdf.splitTextToSize(jsonData, 160);
+              pdf.setFontSize(8);
+              pdf.text(jsonLines, margin + 10, yPosition);
+              yPosition += jsonLines.length * 4 + 10;
+              pdf.setFontSize(10);
+            } else if (element.data) {
+              let dataText = '';
+              if (element.type === 'table' && element.data.rows) {
+                dataText = element.data.rows.map((row: string[]) => row.join(' | ')).join('\n');
+              } else if (element.type === 'list' && element.data.items) {
+                dataText = element.data.items.join(', ');
+              } else {
+                dataText = JSON.stringify(element.data, null, 2);
+              }
+              const dataLines = pdf.splitTextToSize(dataText, 160);
+              pdf.setFontSize(8);
+              pdf.text(dataLines, margin + 10, yPosition);
+              yPosition += dataLines.length * 4 + 10;
+              pdf.setFontSize(10);
+            }
+          });
+        }
+
         // Add page break after each exercise (except the last one)
         if (index < exercises.length - 1) {
           pdf.addPage();
@@ -175,6 +224,18 @@ export class ExerciseExportUtils {
       ${exercise.skills.length > 0 ? `
         <h3 style="margin: 15pt 0 8pt 0;">🛠️ Skills Developed</h3>
         <div style="margin-bottom: 15pt;">${exercise.skills.map(skill => `<span style="background: #dbeafe; color: #1e40af; padding: 2pt 6pt; margin: 1pt 3pt 1pt 0; border-radius: 8pt; font-size: 10pt;">#${skill}</span>`).join('')}</div>
+      ` : ''}
+      ${exercise.type === 'fillable' && 'fillableElements' in exercise && (exercise as any).fillableElements?.length > 0 ? `
+        <h3 style="margin: 15pt 0 8pt 0;">📋 Fillable Elements</h3>
+        ${(exercise as any).fillableElements.map((element: any) => `
+          <div style="margin-bottom: 15pt; padding: 10pt; background: #f8fafc; border-left: 4pt solid #3b82f6;">
+            <strong>${element.type.charAt(0).toUpperCase() + element.type.slice(1)}:</strong><br/>
+            ${element.type === 'form' && element.data ?
+              `<pre style="background: #f1f5f9; padding: 8pt; border-radius: 4pt; font-size: 10pt; margin-top: 8pt; white-space: pre-wrap;">${JSON.stringify({ "type": "form", "data": element.data }, null, 2)}</pre>` :
+              element.data ? JSON.stringify(element.data, null, 2) : 'No data'
+            }
+          </div>
+        `).join('')}
       ` : ''}
     </div>
   `).join('')}
@@ -238,6 +299,29 @@ export class ExerciseExportUtils {
         if (exercise.skills.length > 0) {
           data.push(['Skills']);
           data.push([exercise.skills.join(', ')]);
+        }
+
+        // Fillable elements (only for fillable exercises)
+        if (exercise.type === 'fillable' && 'fillableElements' in exercise && (exercise as any).fillableElements?.length > 0) {
+          data.push(['Fillable Elements']);
+          const fillableElements = (exercise as any).fillableElements;
+          fillableElements.forEach((element: any) => {
+            data.push([`${element.type.charAt(0).toUpperCase() + element.type.slice(1)}:`]);
+            if (element.type === 'form' && element.data) {
+              data.push([JSON.stringify({ "type": "form", "data": element.data }, null, 2)]);
+            } else if (element.data) {
+              let dataText = '';
+              if (element.type === 'table' && element.data.rows) {
+                dataText = element.data.rows.map((row: string[]) => row.join(' | ')).join('\n');
+              } else if (element.type === 'list' && element.data.items) {
+                dataText = element.data.items.join(', ');
+              } else {
+                dataText = JSON.stringify(element.data, null, 2);
+              }
+              data.push([dataText]);
+            }
+            data.push([]); // Empty row
+          });
         }
 
         data.push([]); // Empty row between exercises
@@ -405,6 +489,18 @@ export class ExerciseExportUtils {
               <div class="skills">
                 ${exercise.skills.map(skill => `<span class="skill-tag">#${skill}</span>`).join('')}
               </div>
+            ` : ''}
+            ${exercise.type === 'fillable' && 'fillableElements' in exercise && (exercise as any).fillableElements?.length > 0 ? `
+              <div class="section-title">📋 Fillable Elements</div>
+              ${(exercise as any).fillableElements.map((element: any) => `
+                <div class="example" style="margin-bottom: 15px; padding: 10px; background: #f8fafc; border-left: 4px solid #3b82f6;">
+                  <div class="example-title">${element.type.charAt(0).toUpperCase() + element.type.slice(1)}:</div>
+                  ${element.type === 'form' && element.data ?
+                    `<pre style="background: #f1f5f9; padding: 8pt; border-radius: 4pt; font-size: 10pt; margin-top: 8pt; white-space: pre-wrap;">${JSON.stringify({ "type": "form", "data": element.data }, null, 2)}</pre>` :
+                    element.data ? `<div>${JSON.stringify(element.data, null, 2).replace(/\n/g, '<br>')}</div>` : '<div>No data</div>'
+                  }
+                </div>
+              `).join('')}
             ` : ''}
           </div>
         `).join('')}

@@ -286,6 +286,7 @@ Document context: ${documentText}`;
                 enum: ["practice", "simulation", "analysis", "application", "fillable"],
                 description: "Type of exercise"
               },
+
               difficulty: {
                 type: Type.STRING,
                 enum: ["beginner", "intermediate", "advanced"],
