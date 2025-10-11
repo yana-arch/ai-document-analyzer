@@ -207,56 +207,41 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
 
   const renderTakingQuizGrid = () => (
     <div>
-      <div className="mb-6 text-sm text-zinc-500 dark:text-zinc-400 font-medium text-center">
-        {t('quiz.totalQuestions')}: {questions.length} | {t('quiz.completed')}: {Object.keys(selectedMCAnswers).length + Object.keys(writtenAnswers).filter(i => writtenAnswers[Number(i)] && writtenAnswers[Number(i)].trim()).length}
-      </div>
+      {/* Simplified progress indicator */}
+      <div className="mb-6 text-center">
+        <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-2">
+          {Object.keys(selectedMCAnswers).length + Object.keys(writtenAnswers).filter(i => writtenAnswers[Number(i)] && writtenAnswers[Number(i)].trim()).length} / {questions.length} {t('quiz.completed')}
+        </div>
+        <div className="flex justify-center">
+          <div className="flex space-x-1">
+            {questions.slice(0, 20).map((_, index) => { // Show max 20 questions in progress bar
+              const isAnswered = selectedMCAnswers[index] !== undefined || (writtenAnswers[index] && writtenAnswers[index].trim());
+              const isCurrent = currentQuestionIndex === index;
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {questions.map((question, index) => {
-          const isAnswered = selectedMCAnswers[index] !== undefined || (writtenAnswers[index] && writtenAnswers[index].trim());
-          const isCurrent = currentQuestionIndex === index;
-
-          return (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                isCurrent
-                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 ring-2 ring-blue-400'
-                  : isAnswered
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-400'
-                  : 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-300 dark:border-zinc-600 hover:border-indigo-400'
-              }`}
-              onClick={() => setCurrentQuestionIndex(isCurrent ? -1 : index)}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`text-sm font-semibold ${
-                  isCurrent
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-zinc-600 dark:text-zinc-400'
-                }`}>
-                  {t('quiz.question')} {index + 1}
-                </span>
-                {isAnswered && (
-                  <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">
-                    ✓ {t('quiz.answered')}
-                  </span>
-                )}
-                {isCurrent && (
-                  <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-                    👁️ {t('quiz.viewing')}
-                  </span>
-                )}
-              </div>
-              <h4 className={`text-sm font-medium line-clamp-3 ${
-                isCurrent
-                  ? 'text-blue-800 dark:text-blue-200'
-                  : 'text-zinc-800 dark:text-zinc-200'
-              }`}>
-                {question.question}
-              </h4>
-            </div>
-          );
-        })}
+              return (
+                <button
+                  key={index}
+                  onClick={() => setCurrentQuestionIndex(index)}
+                  className={`w-8 h-8 rounded-full text-xs font-medium transition-all ${
+                    isCurrent
+                      ? 'bg-indigo-600 text-white ring-2 ring-indigo-300'
+                      : isAnswered
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                  }`}
+                  title={`${t('quiz.question')} ${index + 1}`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+            {questions.length > 20 && (
+              <span className="w-8 h-8 flex items-center justify-center text-xs text-zinc-500">
+                ...
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {currentQuestionIndex >= 0 && (() => {

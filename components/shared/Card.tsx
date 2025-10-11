@@ -1,20 +1,72 @@
 import React from 'react';
 
 interface CardProps {
-  title: string;
+  title?: string;
   children: React.ReactNode;
   className?: string;
   actions?: React.ReactNode;
+  variant?: 'default' | 'elevated' | 'outlined' | 'ghost' | 'gradient';
+  size?: 'sm' | 'md' | 'lg';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
-const Card: React.FC<CardProps> = ({ title, children, className, actions }) => {
+const Card: React.FC<CardProps> = ({
+  title,
+  children,
+  className = '',
+  actions,
+  variant = 'default',
+  size = 'md',
+  padding = 'md'
+}) => {
+  const baseClasses = 'rounded-xl transition-all duration-200 overflow-hidden';
+
+  const variantClasses = {
+    default: 'bg-white dark:bg-zinc-800/50 shadow-lg border border-zinc-200 dark:border-zinc-700/50',
+    elevated: 'bg-white dark:bg-zinc-800/50 shadow-xl border border-zinc-200 dark:border-zinc-700/50 transform hover:scale-[1.02] hover:shadow-2xl',
+    outlined: 'bg-transparent border-2 border-zinc-200 dark:border-zinc-700 shadow-sm',
+    ghost: 'bg-transparent border-none shadow-none',
+    gradient: 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800/50 shadow-lg'
+  };
+
+  const sizeClasses = {
+    sm: 'min-h-[200px]',
+    md: 'min-h-[300px]',
+    lg: 'min-h-[400px]'
+  };
+
+  const paddingClasses = {
+    none: '',
+    sm: 'p-3 sm:p-4',
+    md: 'p-4 sm:p-6',
+    lg: 'p-6 sm:p-8'
+  };
+
+  const cardClasses = `
+    ${baseClasses}
+    ${variantClasses[variant]}
+    ${sizeClasses[size]}
+    ${paddingClasses[padding]}
+    ${className}
+  `.trim();
+
   return (
-    <div className={`bg-white dark:bg-zinc-800/50 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-700/50 overflow-hidden ${className}`}>
-      <div className="p-4 sm:p-6">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{title}</h3>
-            {actions && <div className="flex items-center">{actions}</div>}
+    <div className={cardClasses}>
+      {(title || actions) && (
+        <div className="flex justify-between items-start mb-4">
+          {title && (
+            <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+              {title}
+            </h3>
+          )}
+          {actions && (
+            <div className="flex items-center space-x-2 ml-4">
+              {actions}
+            </div>
+          )}
         </div>
+      )}
+      <div className={title || actions ? '' : ''}>
         {children}
       </div>
     </div>
