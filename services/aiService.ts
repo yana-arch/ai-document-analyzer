@@ -70,13 +70,13 @@ class AIService {
     return provider.analyzeDocument(text, settings.ai);
   }
 
-  async createChat(documentText: string, locale: 'en' | 'vi', settings: UserSettings): Promise<any> {
+  async createChat(documentText: string, locale: 'en' | 'vi', settings: UserSettings, conversationContext?: string): Promise<any> {
     const provider = this.getActiveProvider(settings);
     if (!provider) {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.createChat(documentText, locale);
+    return provider.createChat(documentText, locale, conversationContext);
   }
 
   async generateQuiz(text: string, locale: 'en' | 'vi', settings: UserSettings, mcCount: number, writtenCount: number): Promise<QuizQuestion[]> {

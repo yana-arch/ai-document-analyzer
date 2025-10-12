@@ -15,6 +15,18 @@ export interface AnalysisResult {
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
+  timestamp?: string;
+  id?: string;
+}
+
+export interface ChatSession {
+  id: string;
+  fileName: string;
+  documentText: string;
+  messages: ChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+  settings?: UserSettings;
 }
 
 export interface HistoryItem {

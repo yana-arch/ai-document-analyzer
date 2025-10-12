@@ -11,7 +11,7 @@ export abstract class BaseAIProvider {
 
   abstract analyzeDocument(text: string, settings?: AISettings): Promise<AnalysisResult>;
 
-  abstract createChat(documentText: string, locale: 'en' | 'vi'): Promise<any>;
+  abstract createChat(documentText: string, locale: 'en' | 'vi', conversationContext?: string): Promise<any>;
 
   abstract generateQuiz(text: string, locale: 'en' | 'vi', mcCount: number, writtenCount: number): Promise<QuizQuestion[]>;
 

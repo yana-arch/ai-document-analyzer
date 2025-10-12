@@ -303,21 +303,32 @@ export class OpenRouterProvider extends BaseAIProvider {
     }
   }
 
-  async createChat(documentText: string, locale: 'en' | 'vi'): Promise<any> {
+  async createChat(documentText: string, locale: 'en' | 'vi', conversationContext?: string): Promise<any> {
     // OpenRouter doesn't have built-in chat sessions like Gemini
-    // We'll create a mock chat that uses individual requests
+    // We'll create a mock chat that uses individual requests with conversation context
     const chatMock = {
       sendMessage: async (params: { message: string }) => {
         const languageInstruction = locale === 'vi' ? 'You must respond in Vietnamese.' : 'You must respond in English.';
         const notFoundMessage = locale === 'vi' ? 'Không thể tìm thấy câu trả lời trong tài liệu.' : 'I cannot find the answer in the document.';
 
-        const prompt = `${languageInstruction}
+        let prompt = `${languageInstruction}
 
 You are an AI assistant. You must answer questions based only on the content of the following document.
 
 Document: ${documentText}
 
-If the question cannot be answered using the document, say: "${notFoundMessage}"
+If the question cannot be answered using the document, say: "${notFoundMessage}"`;
+
+        if (conversationContext) {
+          prompt += `
+
+Previous conversation context:
+${conversationContext}
+
+When responding, consider the previous conversation to provide more relevant and contextual answers. Reference previous questions and answers when appropriate to maintain conversation flow.`;
+        }
+
+        prompt += `
 
 Now, answer this question: ${params.message}`;
 
@@ -798,5 +809,15 @@ Make it completely relevant to the exercise and document content. Include some p
         }
       }];
     }
+  }
+
+  protected async generateSmartFillableElements(
+    documentText: string,
+    exerciseContext: string,
+    locale: 'en' | 'vi'
+  ): Promise<any[]> {
+    // For OpenRouter, we'll use the same implementation as generateFillableElements
+    // since OpenRouter doesn't have the same smart generation capabilities as Gemini
+    return this.generateFillableElements(documentText, exerciseContext, locale);
   }
 }

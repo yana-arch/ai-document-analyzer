@@ -5,6 +5,7 @@ import Card from './shared/Card';
 import { Chat } from '@google/genai';
 import { useLanguage } from '../contexts/LanguageContext';
 import { createMarkdownHtml } from '../utils/markdownUtils';
+import ChatSessionService from '../services/chatSessionService';
 
 interface MessageActions {
   isEditing: boolean;
@@ -36,6 +37,7 @@ const ReloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 
 const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) => {
+  const [currentSession, setCurrentSession] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -48,47 +50,53 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
   const editInputRef = useRef<HTMLInputElement>(null);
   const { t, locale } = useLanguage();
 
+  // Initialize or load chat session
   useEffect(() => {
-    // Initialize chat and load history when the document (identified by fileName) changes.
-    const initChat = async () => {
+    if (!fileName || !documentText) return;
+
+    const initSession = async () => {
       try {
-        chatRef.current = await aiService.createChat(documentText, locale, settings);
+        // Try to load existing session for this file
+        let session = ChatSessionService.loadSession(fileName);
+
+        if (!session) {
+          // Create new session if none exists
+          session = ChatSessionService.createSession(fileName, documentText, settings);
+          ChatSessionService.saveSession(session);
+        } else {
+          // Update document text if it has changed
+          if (session.documentText !== documentText) {
+            session.documentText = documentText;
+            session.updatedAt = new Date().toISOString();
+            ChatSessionService.saveSession(session);
+          }
+        }
+
+        setCurrentSession(session);
+        setMessages(session.messages.length > 0 ? session.messages : [{ role: 'model', text: t('chat.initialMessage') }]);
+
+        // Initialize chat with conversation context
+        const conversationContext = ChatSessionService.getConversationContext(session);
+        chatRef.current = await aiService.createChat(documentText, locale, settings, conversationContext);
+
       } catch (error) {
-        console.error("Failed to initialize chat:", error);
+        console.error("Failed to initialize chat session:", error);
         chatRef.current = null;
+        setMessages([{ role: 'model', text: t('chat.errorMessage') }]);
       }
     };
 
-    initChat();
-
-    if (fileName) {
-        try {
-            const savedHistory = localStorage.getItem(`ai-doc-analyzer-chat_${fileName}`);
-            if (savedHistory) {
-                const parsedHistory = JSON.parse(savedHistory);
-                if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
-                    setMessages(parsedHistory);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Failed to load chat history:", error);
-        }
-    }
-
-    setMessages([{ role: 'model', text: t('chat.initialMessage') }]);
+    initSession();
   }, [documentText, fileName, locale, settings, t]);
 
+  // Save session whenever messages change
   useEffect(() => {
-    // Save history to localStorage whenever messages change, if there's a conversation.
-    if (fileName && messages.length > 1) { 
-        try {
-            localStorage.setItem(`ai-doc-analyzer-chat_${fileName}`, JSON.stringify(messages));
-        } catch(error) {
-            console.error("Failed to save chat history:", error);
-        }
+    if (currentSession && messages.length > 0) {
+      const updatedSession = ChatSessionService.addMessage(currentSession, messages[messages.length - 1]);
+      setCurrentSession(updatedSession);
+      ChatSessionService.saveSession(updatedSession);
     }
-}, [messages, fileName]);
+  }, [messages, currentSession]);
 
 
   // Handle scroll behavior
@@ -147,18 +155,55 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     const messageToSend = overrideInput || input;
     if (!messageToSend.trim() || isLoading || !chatRef.current) return;
 
-    const userMessage: ChatMessage = { role: 'user', text: messageToSend };
-    setMessages(prev => [...prev, userMessage]);
+    const userMessage: ChatMessage = {
+      role: 'user',
+      text: messageToSend,
+      timestamp: new Date().toISOString(),
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+
+    // Add user message to state immediately
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
     try {
+      // Send message with current chat instance
       const result = await chatRef.current.sendMessage({ message: messageToSend });
-      const modelMessage: ChatMessage = { role: 'model', text: result.text };
+
+      const modelMessage: ChatMessage = {
+        role: 'model',
+        text: result.text,
+        timestamp: new Date().toISOString(),
+        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+
+      // Add AI response to messages
       setMessages(prev => [...prev, modelMessage]);
+
+      // Reinitialize chat with updated conversation context for next message
+      if (currentSession) {
+        const updatedContext = ChatSessionService.getConversationContext({
+          ...currentSession,
+          messages: [...newMessages, modelMessage]
+        });
+
+        try {
+          chatRef.current = await aiService.createChat(documentText, locale, settings, updatedContext);
+        } catch (reinitError) {
+          console.warn("Failed to reinitialize chat with context:", reinitError);
+        }
+      }
+
     } catch (error) {
       console.error("Chat error:", error);
-      const errorMessage: ChatMessage = { role: 'model', text: t('chat.errorMessage') };
+      const errorMessage: ChatMessage = {
+        role: 'model',
+        text: t('chat.errorMessage'),
+        timestamp: new Date().toISOString(),
+        id: `msg-error-${Date.now()}`
+      };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -166,19 +211,21 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
   };
 
   const handleClearChat = useCallback(async () => {
+    // Clear current session
+    if (fileName) {
+      ChatSessionService.clearSessionsForFile(fileName);
+    }
+
+    // Reset state
     setMessages([{ role: 'model', text: t('chat.initialMessage') }]);
+    setCurrentSession(null);
+
     try {
+      // Create new chat without conversation context
       chatRef.current = await aiService.createChat(documentText, locale, settings);
     } catch (error) {
       console.error("Failed to reinitialize chat:", error);
       chatRef.current = null;
-    }
-    if (fileName) {
-      try {
-        localStorage.removeItem(`ai-doc-analyzer-chat_${fileName}`);
-      } catch (error) {
-        console.error("Failed to remove chat history from storage:", error);
-      }
     }
   }, [documentText, fileName, locale, settings, t]);
 

@@ -382,20 +382,31 @@ export class GeminiProvider extends BaseAIProvider {
     }
   }
 
-  async createChat(documentText: string, locale: 'en' | 'vi'): Promise<Chat> {
+  async createChat(documentText: string, locale: 'en' | 'vi', conversationContext?: string): Promise<Chat> {
     const languageInstruction = locale === 'vi' ? 'You must respond in Vietnamese.' : 'You must respond in English.';
     const notFoundMessage = locale === 'vi' ? 'Không thể tìm thấy câu trả lời.' : 'I cannot find the answer in the document.';
 
-    const chat = this.ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction: `${languageInstruction}
+    let systemInstruction = `${languageInstruction}
 
 You are an AI assistant. You must answer questions based only on the content of the following document.
 
 If the question cannot be answered using the document, say: "${notFoundMessage}"
 
-Document: ${documentText}`,
+Document: ${documentText}`;
+
+    if (conversationContext) {
+      systemInstruction += `
+
+Previous conversation context:
+${conversationContext}
+
+When responding, consider the previous conversation to provide more relevant and contextual answers. Reference previous questions and answers when appropriate to maintain conversation flow.`;
+    }
+
+    const chat = this.ai.chats.create({
+      model: 'gemini-2.5-flash',
+      config: {
+        systemInstruction: systemInstruction,
       }
     });
     return chat;
