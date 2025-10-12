@@ -7,6 +7,8 @@ import AnalysisDashboard from './components/AnalysisDashboard';
 import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
+import ErrorBoundary from './components/ErrorBoundary';
+import PerformanceMonitor from './components/PerformanceMonitor';
 import { useLanguage } from './contexts/LanguageContext';
 import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
 import { aiService } from './services/aiService';
@@ -221,56 +223,66 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
-      <Header />
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
-            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
-              <Loader size="lg" />
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
-              <ProgressIndicator steps={analysisSteps} currentStep={0} />
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('App Error:', error, errorInfo);
+        // Here you could send error to tracking service
+      }}
+    >
+      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
+        <Header />
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
+              <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
+                <Loader size="lg" />
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
+                <ProgressIndicator steps={analysisSteps} currentStep={0} />
+              </div>
             </div>
-          </div>
-        ) : error ? (
-           <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
-             <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
-                <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                    <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
-                <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error)}</p>
-                 <button
-                    onClick={handleReset}
-                    className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
-                >
-                    {t('error.tryAgain')}
-                </button>
+          ) : error ? (
+             <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
+               <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                      <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
+                  <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error)}</p>
+                   <button
+                      onClick={handleReset}
+                      className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
+                  >
+                      {t('error.tryAgain')}
+                  </button>
+              </div>
             </div>
-          </div>
-        ) : analysisResult && documentText ? (
-          <AnalysisDashboard
-            analysis={analysisResult}
-            documentText={documentText}
-            fileName={fileName || 'Uploaded Document'}
-            settings={settings}
-          />
-        ) : (
-          <>
-            <DocumentUploader onProcess={handleDocumentProcess} />
-            <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
-          </>
-        )}
-      </main>
+          ) : analysisResult && documentText ? (
+            <AnalysisDashboard
+              analysis={analysisResult}
+              documentText={documentText}
+              fileName={fileName || 'Uploaded Document'}
+              settings={settings}
+            />
+          ) : (
+            <>
+              <DocumentUploader onProcess={handleDocumentProcess} />
+              <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
+            </>
+          )}
+        </main>
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        settings={settings}
-        onSaveSettings={handleSaveSettings}
-        t={t}
-      />
-    </div>
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          settings={settings}
+          onSaveSettings={handleSaveSettings}
+          t={t}
+        />
+
+        {/* Performance Monitor - chỉ hiển thị ở development mode */}
+        {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
+      </div>
+    </ErrorBoundary>
   );
 };
 

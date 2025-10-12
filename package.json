@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:analyze": "vite-bundle-analyzer",
+    "build:performance": "vite build --mode production",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist"
   },
   "dependencies": {
     "@google/genai": "^1.24.0",
@@ -26,9 +29,12 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.18.10",
     "@vitejs/plugin-react": "^5.0.0",
+    "rollup-plugin-visualizer": "^6.0.4",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vite-bundle-analyzer": "^1.2.3",
+    "webpack-bundle-analyzer": "^4.10.2"
   }
 }
