@@ -91,12 +91,15 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
 
   // Save session whenever messages change
   useEffect(() => {
-    if (currentSession && messages.length > 0) {
+    if (currentSession && messages.length > 0 && messages[messages.length - 1].id) {
       const updatedSession = ChatSessionService.addMessage(currentSession, messages[messages.length - 1]);
-      setCurrentSession(updatedSession);
+      // Update current session without triggering re-render
+      if (updatedSession.id !== currentSession.id || updatedSession.updatedAt !== currentSession.updatedAt) {
+        setCurrentSession(updatedSession);
+      }
       ChatSessionService.saveSession(updatedSession);
     }
-  }, [messages, currentSession]);
+  }, [messages, currentSession?.id]);
 
 
   // Handle scroll behavior
@@ -150,7 +153,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     setEditContent('');
   }, []);
 
-  const handleSubmit = async (e?: React.FormEvent, overrideInput?: string) => {
+  const handleSubmit = useCallback(async (e?: React.FormEvent, overrideInput?: string) => {
     if (e) e.preventDefault();
     const messageToSend = overrideInput || input;
     if (!messageToSend.trim() || isLoading || !chatRef.current) return;
@@ -208,7 +211,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, messages, currentSession, documentText, locale, settings, t]);
 
   const handleClearChat = useCallback(async () => {
     // Clear current session
@@ -250,7 +253,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     // Remove from user to end
     setMessages(prev => prev.slice(0, userIndex));
     // Then send the user text
-    handleSubmit(undefined, userText);
+    setTimeout(() => handleSubmit(undefined, userText), 0);
   }, [messages, handleSubmit]);
 
   const handleResend = useCallback((userIndex: number) => {
@@ -260,7 +263,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
     // Remove from user to end
     setMessages(prev => prev.slice(0, userIndex));
     // Send the text
-    handleSubmit(undefined, text);
+    setTimeout(() => handleSubmit(undefined, text), 0);
   }, [messages, handleSubmit]);
 
   return (
