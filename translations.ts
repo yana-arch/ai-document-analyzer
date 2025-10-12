@@ -66,7 +66,8 @@ const translations = {
       fetchFailure: "Failed to fetch the URL. The network may be down, the URL invalid, or the site is blocking requests.",
       contentRetrieval: "Could not retrieve content from the URL. It might be a private page or temporarily unavailable.",
       textExtraction: "Could not extract meaningful text from the URL. The page might be empty, a non-text document, or rendered in a way that is difficult to parse.",
-      urlProcessing: "An error occurred while processing the URL. Please check the URL and try again."
+      urlProcessing: "An error occurred while processing the URL. Please check the URL and try again.",
+      corsProxyFailed: "All available CORS proxy services failed. This might be due to network restrictions or the target site blocking requests. Try uploading a file instead, or try a different URL."
     },
     uploader: {
       title: "Unlock Insights from Any Document",
@@ -220,7 +221,8 @@ const translations = {
       fetchFailure: "Không thể truy xuất URL. Mạng có thể bị lỗi, URL không hợp lệ, hoặc trang web đang chặn yêu cầu.",
       contentRetrieval: "Không thể lấy nội dung từ URL. Đây có thể là một trang riêng tư hoặc tạm thời không có sẵn.",
       textExtraction: "Không thể trích xuất văn bản có ý nghĩa từ URL. Trang có thể trống, không phải tài liệu văn bản, hoặc được hiển thị theo cách khó phân tích.",
-      urlProcessing: "Đã xảy ra lỗi khi xử lý URL. Vui lòng kiểm tra lại URL."
+      urlProcessing: "Đã xảy ra lỗi khi xử lý URL. Vui lòng kiểm tra lại URL.",
+      corsProxyFailed: "Tất cả các dịch vụ proxy CORS có sẵn đều thất bại. Điều này có thể do hạn chế mạng hoặc trang web đích đang chặn các yêu cầu. Hãy thử tải tệp lên thay thế, hoặc thử URL khác."
     },
     uploader: {
       title: "Khám phá thông tin chi tiết từ mọi tài liệu",

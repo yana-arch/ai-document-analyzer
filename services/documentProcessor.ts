@@ -131,34 +131,126 @@ export const extractTextFromSource = (source: File | string): Promise<string> =>
       }
     } else {
       // Handle URL
-      try {
-        // Using a CORS proxy to fetch URL content from the client-side.
-        // This is a workaround for demo purposes. A production app should use a backend server.
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(source)}`);
+      const corsProxies = [
+        'https://api.allorigins.win/get?url=',
+        'https://thingproxy.freeboard.io/fetch/',
+        'https://cors-anywhere.herokuapp.com/',
+        'https://proxy.cors.sh/'
+      ];
 
-        if (!response.ok) {
-          throw new Error("error.fetchFailure");
-        }
+      let lastError: Error | null = null;
 
-        const data = await response.json();
-        const htmlContent: string = data.contents;
-        const extractedText = extractTextFromHtml(htmlContent);
+      // Try multiple CORS proxies with timeout
+      for (const proxyBase of corsProxies) {
+        try {
+          console.log(`Trying CORS proxy: ${proxyBase}`);
 
-        // Heuristic check: if the extracted text is too short, it's likely not a useful article.
-        if (!extractedText || extractedText.length < 100) {
-             throw new Error("error.textExtraction");
-        }
+          // Create AbortController for timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-        resolve(extractedText);
-      } catch (error) {
-        console.error("URL processing error:", error);
-        // Pass specific error keys for translation, otherwise a generic one.
-        if (error instanceof Error && error.message.startsWith('error.')) {
-            reject(error);
-        } else {
-            reject(new Error("error.urlProcessing"));
+          let proxyUrl: string;
+          if (proxyBase.includes('thingproxy')) {
+            // Thingproxy handles URL encoding differently
+            proxyUrl = proxyBase + source;
+          } else if (proxyBase.includes('cors-anywhere')) {
+            proxyUrl = proxyBase + source;
+          } else if (proxyBase.includes('proxy.cors.sh')) {
+            proxyUrl = proxyBase + source;
+          } else {
+            // allorigins.win
+            proxyUrl = proxyBase + encodeURIComponent(source);
+          }
+
+          const response = await fetch(proxyUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; WebBrowser/1.0)',
+              'Accept': 'application/json, text/html, */*',
+              ...(proxyBase.includes('cors.sh') && { 'x-cors-api-key': 'fetch' }) // For cors.sh proxy
+            }
+          });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            console.warn(`CORS proxy ${proxyBase} returned status: ${response.status}`);
+            continue; // Try next proxy
+          }
+
+          // Handle potential Content-Length mismatch issues by checking response type and content
+          let data;
+          const contentType = response.headers.get('content-type');
+
+          // First, try to get the response text as the response body can only be consumed once
+          let responseText: string;
+          try {
+            responseText = await response.text();
+          } catch (textError) {
+            console.error("Failed to read response text:", textError);
+            continue; // Try next proxy
+          }
+
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              data = JSON.parse(responseText);
+            } catch (jsonError) {
+              console.warn("JSON parsing failed due to malformed response:", jsonError);
+              // If the response is not valid JSON, it might be HTML or partial content
+              // Try to extract meaningful content or throw appropriate error
+              if (responseText.startsWith('{') && responseText.includes('contents')) {
+                // It looks like JSON but is malformed - this is likely a partial response
+                console.warn("Partial JSON response detected, trying to salvage contents");
+                try {
+                  // Extract contents if it looks like partial JSON
+                  const contentsMatch = responseText.match(/"contents"\s*:\s*"([^"]+(?:\\.[^"]*)*?)"/);
+                  if (contentsMatch) {
+                    data = { contents: contentsMatch[1].replace(/\\"/g, '"') };
+                  } else {
+                    throw new Error("error.partialResponse");
+                  }
+                } catch (partialError) {
+                  console.error("Failed to extract partial JSON response:", partialError);
+                  continue; // Try next proxy
+                }
+              } else {
+                // Likely HTML or unexpected response content
+                data = { contents: responseText };
+              }
+            }
+          } else {
+            // If not JSON, use the response text directly
+            data = { contents: responseText };
+          }
+
+          if (!data || !data.contents) {
+            console.warn("Invalid response data from proxy");
+            continue; // Try next proxy
+          }
+
+          const htmlContent: string = data.contents;
+          const extractedText = extractTextFromHtml(htmlContent);
+
+          // Heuristic check: if the extracted text is too short, it's likely not a useful article.
+          if (!extractedText || extractedText.length < 100) {
+            console.warn("Extracted text too short, trying next proxy");
+            continue; // Try next proxy
+          }
+
+          console.log(`Successfully extracted ${extractedText.length} characters using proxy: ${proxyBase}`);
+          resolve(extractedText);
+          return; // Success, exit the loop
+
+        } catch (error) {
+          lastError = error as Error;
+          console.warn(`Failed with proxy ${proxyBase}:`, error);
+          // Continue to next proxy
         }
       }
+
+      // All proxies failed
+      console.error("All CORS proxies failed. Last error:", lastError);
+      // Pass specific error keys for translation, otherwise a generic one.
+      reject(new Error("error.corsProxyFailed"));
     }
   });
 };
