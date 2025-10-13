@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Chat } from "@google/genai";
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, Exercise, AISettings } from '../../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, MultipleChoiceQuestion, WrittenAnswerQuestion, Exercise, AISettings, DocumentTip } from '../../types';
 import { BaseAIProvider } from './BaseAIProvider';
 
 // Prompt Template System for better organization and reusability
@@ -1147,5 +1147,156 @@ Make it relevant to the exercise and document content.`;
         }
       }];
     }
+  }
+
+  async generateDocumentTips(documentText: string, analysis: Omit<AnalysisResult, 'tips'>, locale: 'en' | 'vi', settings?: AISettings): Promise<DocumentTip[]> {
+    const languageInstruction = locale === 'vi' ? 'Tips in Vietnamese.' : 'Tips in English.';
+
+    const tipsSchema = {
+      type: Type.OBJECT,
+      properties: {
+        tips: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING, description: "Unique identifier for the tip" },
+              content: { type: Type.STRING, description: "The tip content" },
+              type: {
+                type: Type.STRING,
+                enum: ["factual", "story", "example"],
+                description: "Type of tip"
+              },
+              source: { type: Type.STRING, description: "Why this tip is factual" },
+              importance: {
+                type: Type.STRING,
+                enum: ["high", "medium", "low"],
+                description: "Importance level"
+              },
+              category: { type: Type.STRING, description: "Optional category like historical, technical, social, etc." }
+            },
+            required: ["id", "content", "type", "source", "importance"]
+          },
+          description: "List of document tips",
+          minItems: 3,
+          maxItems: 8
+        }
+      },
+      required: ["tips"]
+    };
+
+    const prompt = `${languageInstruction}
+
+Generate factual tips about the document content. Each tip must be based on real information and supported by evidence.
+
+Document Summary: ${analysis.summary}
+Topics: ${analysis.topics.join(', ')}
+Sentiment: ${analysis.sentiment}
+
+Document Content:
+---
+${documentText}
+---
+
+Rules for tips:
+1. Factual tips must draw from real historical events, scientific facts, or documented knowledge
+2. Story tips should reference real stories from history, biographies, or actual case studies
+3. Example tips should provide real-world examples that actually happened or are established practices
+4. Each tip must have a "source" explaining why it's factual (e.g., "Based on historical data from 1929 crash", "From Newton's laws of motion", "Documented in the author's professional experience")
+5. Only create tips that derive from verifiable information, not opinions
+6. Tips should be interesting and revealing insights about the document content`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: tipsSchema,
+        }
+      });
+
+      const data = JSON.parse(response.text.trim()) as { tips: DocumentTip[] };
+
+      // Validate and enhance tips
+      const validatedTips = data.tips.map(tip => ({
+        ...tip,
+        id: tip.id || `tip-${Math.random().toString(36).substr(2, 9)}`,
+        importance: tip.importance || 'medium',
+        type: tip.type || 'factual',
+        source: tip.source || 'Based on document analysis',
+        category: tip.category || this.inferCategoryFromContent(tip.content)
+      }));
+
+      return validatedTips;
+    } catch (error) {
+      console.error("Gemini tips generation error:", error);
+      // Fallback tips based on document analysis
+      return this.generateFallbackTips(analysis, locale);
+    }
+  }
+
+  protected inferCategoryFromContent(content: string): string {
+    const lowerContent = content.toLowerCase();
+
+    if (lowerContent.includes('history') || lowerContent.includes('past') || /19\d{2}|20\d{2}/.test(lowerContent)) {
+      return 'historical';
+    }
+    if (lowerContent.includes('technology') || lowerContent.includes('science') || lowerContent.includes('engineering')) {
+      return 'technical';
+    }
+    if (lowerContent.includes('society') || lowerContent.includes('culture') || lowerContent.includes('people')) {
+      return 'social';
+    }
+    if (lowerContent.includes('business') || lowerContent.includes('economy') || lowerContent.includes('market')) {
+      return 'economic';
+    }
+    if (lowerContent.includes('education') || lowerContent.includes('learning') || lowerContent.includes('study')) {
+      return 'educational';
+    }
+
+    return 'general';
+  }
+
+  protected generateFallbackTips(analysis: Omit<AnalysisResult, 'tips'>, locale: 'en' | 'vi'): DocumentTip[] {
+    const isVietnamese = locale === 'vi';
+    const topicBasedTip = isVietnamese
+      ? `Chủ đề chính "${analysis.topics[0] || 'được phân tích'}" có thể được áp dụng trong nhiều ngữ cảnh thực tế khác nhau.`
+      : `The main topic "${analysis.topics[0] || 'being analyzed'}" can be applied in various real-world contexts.`;
+
+    const sentimentTip = isVietnamese
+      ? `Tâm trạng chung của tài liệu (${analysis.sentiment}) phản ánh cách tiếp cận thực tế và cân nhắc kỹ lưỡng.`
+      : `The document's overall ${analysis.sentiment.toLowerCase()} sentiment reflects a practical and well-considered approach.`;
+
+    const structureTip = isVietnamese
+      ? 'Cấu trúc logic của tài liệu này tuân theo các nguyên tắc viết học thuật chuẩn quốc tế.'
+      : 'This document follows standard international academic writing principles in its logical structure.';
+
+    return [
+      {
+        id: `fallback-tip-1-${Math.random().toString(36).substr(2, 9)}`,
+        content: topicBasedTip,
+        type: 'factual',
+        source: 'Based on document analysis and topic extraction',
+        importance: 'high',
+        category: 'general'
+      },
+      {
+        id: `fallback-tip-2-${Math.random().toString(36).substr(2, 9)}`,
+        content: sentimentTip,
+        type: 'factual',
+        source: 'Based on sentiment analysis of document content',
+        importance: 'medium',
+        category: 'general'
+      },
+      {
+        id: `fallback-tip-3-${Math.random().toString(36).substr(2, 9)}`,
+        content: structureTip,
+        type: 'factual',
+        source: 'Based on established academic writing standards',
+        importance: 'medium',
+        category: 'educational'
+      }
+    ];
   }
 }

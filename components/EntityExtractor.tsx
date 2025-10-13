@@ -116,7 +116,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({ entities, sentiment }
               // Normalize entity type: handle various formats like "METHODOLOGY", "Methodology", "Financial Concept"
               const normalizedType = entity.type.replace(/\s+/g, '').toUpperCase();
               const entityStyle = entityStyles[normalizedType] || entityStyles.default;
-              console.log('[Entity Debug] Entity:', entity.text, 'Type:', entity.type, '.Alter:', normalizedType); // Debug log
+
               return (
                 <div key={index} className={`px-1 inline-flex items-center text-sm border rounded-lg ${entityStyle.bgColor} ${entityStyle.color}`}>
                   {entityStyle.icon}

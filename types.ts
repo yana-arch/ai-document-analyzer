@@ -5,11 +5,21 @@ export interface Entity {
   type: string;
 }
 
+export interface DocumentTip {
+  id: string;
+  content: string;
+  type: 'factual' | 'story' | 'example';
+  source: string; // Why this tip is factual (e.g., "Supported by historical data", "Based on author's professional experience")
+  importance: 'high' | 'medium' | 'low';
+  category?: string; // Optional category like "historical", "technical", "social", etc.
+}
+
 export interface AnalysisResult {
   summary: string;
   topics: string[];
   entities: Entity[];
   sentiment: 'Positive' | 'Negative' | 'Neutral' | string;
+  tips: DocumentTip[];
 }
 
 export interface ChatMessage {
@@ -299,6 +309,7 @@ export interface UserSettings {
     enableDarkMode: boolean;
     autoSave: boolean;
     enableDefaultGemini: boolean;
+    enableDocumentTips: boolean;
   };
   apis: APIConfiguration[];
 }

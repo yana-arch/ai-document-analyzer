@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, MultipleChoiceQuestion, WrittenAnswerQuestion, AISettings } from '../../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, MultipleChoiceQuestion, WrittenAnswerQuestion, AISettings, DocumentTip } from '../../types';
 import { BaseAIProvider } from './BaseAIProvider';
 
 export class OpenRouterProvider extends BaseAIProvider {
@@ -292,7 +292,8 @@ export class OpenRouterProvider extends BaseAIProvider {
           text: e.text || '',
           type: e.type || 'UNKNOWN'
         })) : [],
-        sentiment: result.sentiment || 'Neutral'
+        sentiment: result.sentiment || 'Neutral',
+        tips: result.tips || [] // Add tips field
       };
 
       this.cache.set(cacheKey, formattedResult);
@@ -809,6 +810,193 @@ Make it completely relevant to the exercise and document content. Include some p
         }
       }];
     }
+  }
+
+  async generateDocumentTips(documentText: string, analysis: Omit<AnalysisResult, 'tips'>, locale: 'en' | 'vi', settings?: AISettings): Promise<DocumentTip[]> {
+    const languageInstruction = locale === 'vi' ? 'Generate tips in Vietnamese.' : 'Generate tips in English.';
+
+    const prompt = `${languageInstruction}
+
+Generate 3-5 factual tips about the document content. Each tip must be substantiated by real evidence.
+
+Document Summary: ${analysis.summary}
+Key Topics: ${analysis.topics.join(', ')}
+Overall Sentiment: ${analysis.sentiment}
+
+Document Content:
+---
+${documentText}
+---
+
+Requirements for each tip:
+1. Be entirely factual and based on verifiable information
+2. Include a clear explanation of why it's factual (source)
+3. Indicate importance level (high/medium/low)
+4. Specify tip type (factual/story/example)
+
+Format each tip as a structured response.`;
+
+    const messages = [{
+      role: 'user',
+      content: prompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+
+      if (typeof response === 'string') {
+        // Parse natural language tips
+        return this.parseNaturalLanguageTips(response, locale);
+      } else if (Array.isArray(response) || response.tips) {
+        // Structured response
+        const tips = response.tips || response;
+        return tips.map((tip: any, index: number) => ({
+          id: tip.id || `tip-${index}-${Math.random().toString(36).substr(2, 9)}`,
+          content: tip.content || '',
+          type: tip.type || 'factual',
+          source: tip.source || 'Based on document analysis',
+          importance: tip.importance || 'medium',
+          category: tip.category || this.inferCategoryFromContent(tip.content || '')
+        }));
+      }
+
+      // Fallback to natural language parsing
+      return this.parseNaturalLanguageTips(JSON.stringify(response), locale);
+    } catch (error) {
+      console.error('OpenRouter tips generation error:', error);
+      // Return fallback tips
+      return this.generateFallbackTipsOpenRouter(analysis, locale);
+    }
+  }
+
+  private parseNaturalLanguageTips(content: string, locale: 'en' | 'vi'): DocumentTip[] {
+    const tips: DocumentTip[] = [];
+    const lines = content.split('\n');
+
+    let currentTip: Partial<DocumentTip> | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Look for tip indicators
+      if (line.match(/tip\s*\d+:/i) || line.match(/^(\d+)\.\s*/)) {
+        // Save previous tip if exists
+        if (currentTip) {
+          this.addValidTip(tips, currentTip);
+        }
+
+        // Start new tip
+        currentTip = {
+          id: `tip-${tips.length}-${Math.random().toString(36).substr(2, 9)}`,
+          content: line.replace(/tip\s*\d+:\s*/i, '').replace(/^\d+\.\s*/, ''),
+          type: 'factual',
+          source: '',
+          importance: 'medium'
+        };
+        continue;
+      }
+
+      // Process tip content
+      if (currentTip && !currentTip.content) {
+        currentTip.content = line;
+      } else if (currentTip) {
+        // Look for metadata
+        const typeMatch = line.match(/type:\s*(factual|story|example)/i);
+        if (typeMatch) {
+          currentTip.type = typeMatch[1] as 'factual' | 'story' | 'example';
+        }
+
+        const importanceMatch = line.match(/importance:\s*(high|medium|low)/i);
+        if (importanceMatch) {
+          currentTip.importance = importanceMatch[1] as 'high' | 'medium' | 'low';
+        }
+
+        // Check if line looks like a source
+        if (line.match(/source:|based on|from |according to/i)) {
+          currentTip.source = line;
+        }
+      }
+    }
+
+    // Don't forget the last tip
+    if (currentTip) {
+      this.addValidTip(tips, currentTip);
+    }
+
+    return tips.slice(0, 8); // Limit to 8 tips
+  }
+
+  private addValidTip(tips: DocumentTip[], tip: Partial<DocumentTip>): void {
+    if (tip.content && tip.content.length > 10) {
+      // Fill in missing fields
+      if (!tip.id) tip.id = `tip-${tips.length}-${Math.random().toString(36).substr(2, 9)}`;
+      if (!tip.type) tip.type = 'factual';
+      if (!tip.source) tip.source = 'Based on document analysis';
+      if (!tip.importance) tip.importance = 'medium';
+      if (!tip.category) tip.category = this.inferCategoryFromContent(tip.content);
+
+      tips.push(tip as DocumentTip);
+    }
+  }
+
+  protected generateFallbackTipsOpenRouter(analysis: Omit<AnalysisResult, 'tips'>, locale: 'en' | 'vi'): DocumentTip[] {
+    const isVietnamese = locale === 'vi';
+
+    return [
+      {
+        id: `fallback-tip-1-${Math.random().toString(36).substr(2, 9)}`,
+        content: isVietnamese
+          ? `Việc xem xét các chủ đề chính như ${analysis.topics.slice(0, 3).join(', ')} có thể cung cấp những góc nhìn sâu sắc về nội dung tài liệu.`
+          : `Examining key topics like ${analysis.topics.slice(0, 3).join(', ')} can provide deeper insights into the document content.`,
+        type: 'factual',
+        source: 'Based on topic analysis and document structure',
+        importance: 'high',
+        category: 'general'
+      },
+      {
+        id: `fallback-tip-2-${Math.random().toString(36).substr(2, 9)}`,
+        content: isVietnamese
+          ? `Tâm trạng tổng thể của tài liệu cho thấy một phương pháp cân nhắc và có nhận thức về đối tượng mục tiêu.`
+          : `The document's overall ${analysis.sentiment.toLowerCase()} sentiment indicates a thoughtful and audience-aware approach.`,
+        type: 'factual',
+        source: 'Based on sentiment analysis',
+        importance: 'medium',
+        category: 'general'
+      },
+      {
+        id: `fallback-tip-3-${Math.random().toString(36).substr(2, 9)}`,
+        content: isVietnamese
+          ? 'Cấu trúc nội dung theo logic này là một cách tổ chức thường được sử dụng trong các tài liệu học thuật và chuyên nghiệp.'
+          : 'This logical content structure is a standard format used in academic and professional documents.',
+        type: 'factual',
+        source: 'Based on established writing conventions',
+        importance: 'medium',
+        category: 'educational'
+      }
+    ];
+  }
+
+  protected inferCategoryFromContent(content: string): string {
+    const lowerContent = content.toLowerCase();
+
+    if (lowerContent.includes('history') || lowerContent.includes('past') || /19\d{2}|20\d{2}/.test(lowerContent)) {
+      return 'historical';
+    }
+    if (lowerContent.includes('technology') || lowerContent.includes('science') || lowerContent.includes('engineering')) {
+      return 'technical';
+    }
+    if (lowerContent.includes('society') || lowerContent.includes('culture') || lowerContent.includes('people')) {
+      return 'social';
+    }
+    if (lowerContent.includes('business') || lowerContent.includes('economy') || lowerContent.includes('market')) {
+      return 'economic';
+    }
+    if (lowerContent.includes('education') || lowerContent.includes('learning') || lowerContent.includes('study')) {
+      return 'educational';
+    }
+
+    return 'general';
   }
 
   protected async generateSmartFillableElements(

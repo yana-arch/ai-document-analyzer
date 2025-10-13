@@ -200,8 +200,27 @@ const translations = {
       enableDefaultGeminiDesc: "Fallback to default Gemini API if no custom configuration is active",
       darkMode: "Dark Mode",
       darkModeDesc: "Toggle between light and dark themes",
+      enableDocumentTips: "Enable AI Document Tips",
+      enableDocumentTipsDesc: "Show factual insights and verified information related to analyzed documents",
       cancel: "Cancel",
       saveSettings: "Save Settings",
+    },
+    tips: {
+      title: "AI-Generated Document Tips",
+      description: "Factual insights and related information from verified sources, stories, and real-world examples.",
+      disclaimer: "Disclaimer:",
+      disclaimerText: "AI-generated tips are based on available information. For critical decisions, consult primary sources or domain experts. Factual accuracy is prioritized over entertainment value.",
+      source: "Source",
+      importance: "importance",
+      type: {
+        factual: "Factual",
+        story: "Story",
+        example: "Example",
+      },
+    },
+    common: {
+      readMore: "Read more",
+      showLess: "Show less",
     }
   },
   vi: {
@@ -394,8 +413,27 @@ const translations = {
       enableDefaultGeminiDesc: "Phản hồi.API Gemini mặc định nếu không có cấu hình tùy chỉnh nào đang hoạt động",
       darkMode: "Chế độ tối",
       darkModeDesc: "Chuyển đổi giữa chủ đề sáng và tối",
+      enableDocumentTips: "Bật Gợi ý Tài liệu AI",
+      enableDocumentTipsDesc: "Hiển thị những hiểu biết chính xác và thông tin đã được xác thực liên quan đến tài liệu đã phân tích",
       cancel: "Hủy",
       saveSettings: "Lưu cài đặt",
+    },
+    tips: {
+      title: "Gợi ý Tài liệu từ AI",
+      description: "Những hiểu biết chính xác và thông tin liên quan từ nguồn xác thực, câu chuyện thực tế và ví dụ thực tế.",
+      disclaimer: "Lưu ý:",
+      disclaimerText: "Những gợi ý được tạo bởi AI dựa trên thông tin có sẵn. Đối với những quyết định quan trọng, hãy tham khảo nguồn gốc chính hoặc chuyên gia về lĩnh vực. Độ chính xác của thông tin được ưu tiên hơn giá trị giải trí.",
+      source: "Nguồn",
+      importance: "- độ tin cậy",
+      type: {
+        factual: "Thực tế",
+        story: "Câu chuyện",
+        example: "Ví dụ",
+      },
+    },
+    common: {
+      readMore: "Đọc thêm",
+      showLess: "Hiện ít",
     }
   }
 };

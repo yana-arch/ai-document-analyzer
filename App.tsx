@@ -126,13 +126,51 @@ const App: React.FC = () => {
     }
   }, [settings.apis, settings.ui]);
   
-  const handleLoadHistory = (item: HistoryItem) => {
-    setAnalysisResult(item.analysis);
-    setDocumentText(item.documentText);
-    setFileName(item.fileName);
+  const handleLoadHistory = useCallback(async (item: HistoryItem) => {
+    let processedItem = item;
+
+    // If the item doesn't have tips but settings enable them, generate tips on the fly
+    if (settings.ui.enableDocumentTips && (!item.analysis.tips || item.analysis.tips.length === 0)) {
+      try {
+        // Generate tips silently in the background without showing loading spinner
+        const tips = await aiService.analyzeDocument(item.documentText, settings).then(result => result.tips);
+
+        // Update the analysis result with generated tips
+        processedItem = {
+          ...item,
+          analysis: {
+            ...item.analysis,
+            tips
+          }
+        };
+
+        // Also update the item in history silently
+        setHistory(prevHistory => {
+          const updatedHistory = prevHistory.map(historyItem =>
+            (historyItem.fileName === item.fileName && historyItem.date === item.date)
+              ? { ...historyItem, analysis: processedItem.analysis }
+              : historyItem
+          );
+          // Save updated history to localStorage
+          try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+          } catch (err) {
+            console.error("Failed to update history in localStorage", err);
+          }
+          return updatedHistory;
+        });
+      } catch (error) {
+        console.warn('Failed to generate tips for historical document:', error);
+        // Continue with original item if tip generation fails
+      }
+    }
+
+    setAnalysisResult(processedItem.analysis);
+    setDocumentText(processedItem.documentText);
+    setFileName(processedItem.fileName);
     setError(null);
     setIsLoading(false);
-  };
+  }, [settings.ui.enableDocumentTips, aiService]);
 
   const handleImportHistory = (mergedHistory: HistoryItem[]) => {
     setHistory(mergedHistory);

@@ -1,4 +1,4 @@
-import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, Exercise, AISettings } from '../../types';
+import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, Exercise, AISettings, DocumentTip } from '../../types';
 
 export abstract class BaseAIProvider {
   protected providerName: string;
@@ -10,6 +10,8 @@ export abstract class BaseAIProvider {
   }
 
   abstract analyzeDocument(text: string, settings?: AISettings): Promise<AnalysisResult>;
+
+  abstract generateDocumentTips(documentText: string, analysis: Omit<AnalysisResult, 'tips'>, locale: 'en' | 'vi', settings?: AISettings): Promise<DocumentTip[]>;
 
   abstract createChat(documentText: string, locale: 'en' | 'vi', conversationContext?: string): Promise<any>;
 

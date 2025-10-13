@@ -3,6 +3,7 @@ import { AnalysisResult, UserSettings } from '../types';
 import SummaryPanel from './SummaryPanel';
 import TopicsCloud from './TopicsCloud';
 import EntityExtractor from './EntityExtractor';
+import DocumentTips from './DocumentTips';
 import Card from './shared/Card';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -75,6 +76,11 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
         <div className="space-y-6">
           <MemoizedTopicsCloud />
           <MemoizedEntityExtractor />
+          {settings.ui.enableDocumentTips && analysis.tips && analysis.tips.length > 0 && (
+            <Suspense fallback={<div className="flex items-center justify-center h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Tips...</span></div>}>
+              <DocumentTips tips={analysis.tips} />
+            </Suspense>
+          )}
         </div>
       </div>
        <Card title={t('dashboard.fullDocumentText')}>

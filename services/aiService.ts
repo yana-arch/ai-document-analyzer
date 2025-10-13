@@ -1,4 +1,4 @@
-import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, ChatMessage, UserSettings, APIConfiguration } from '../types';
+import { AnalysisResult, QuizQuestion, GradedWrittenAnswer, Exercise, ChatMessage, UserSettings, APIConfiguration, DocumentTip } from '../types';
 import { decryptApiKey } from '../utils/apiKeyUtils';
 import { GeminiProvider } from './providers/GeminiProvider';
 import { OpenRouterProvider } from './providers/OpenRouterProvider';
@@ -67,7 +67,23 @@ class AIService {
       throw new Error('No active AI provider configured. Please configure an API in Settings.');
     }
 
-    return provider.analyzeDocument(text, settings.ai);
+    const analysis = await provider.analyzeDocument(text, settings.ai);
+
+    // Generate document tips using the analysis if enabled
+    let tips: DocumentTip[] = [];
+    if (settings.ui.enableDocumentTips) {
+      try {
+        tips = await provider.generateDocumentTips(text, analysis, settings.ui.enableDefaultGemini ? 'en' : 'en', settings.ai);
+      } catch (error) {
+        console.warn('Failed to generate document tips:', error);
+        // Continue without tips if generation fails
+      }
+    }
+
+    return {
+      ...analysis,
+      tips
+    };
   }
 
   async createChat(documentText: string, locale: 'en' | 'vi', settings: UserSettings, conversationContext?: string): Promise<any> {
