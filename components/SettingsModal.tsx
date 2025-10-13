@@ -19,9 +19,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   t,
 }) => {
   const [localSettings, setLocalSettings] = useState<UserSettings>(settings);
+  const [activeTab, setActiveTab] = useState<'ai' | 'apis' | 'ui' | 'tips'>('ai');
 
   useEffect(() => {
-    setLocalSettings(settings);
+    setLocalSettings({
+      ...settings,
+      documentTips: settings.documentTips || {
+        autoRefreshInterval: 0,
+        showRandomTip: false,
+        maxTipsCount: 5,
+        refreshBehavior: 'append',
+      }
+    });
   }, [settings]);
 
   const handleSave = () => {
@@ -44,6 +53,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       ...prev,
       ui: {
         ...prev.ui,
+        [key]: value
+      }
+    }));
+  };
+
+  const updateDocumentTipsSetting = <K extends keyof UserSettings['documentTips']>(key: K, value: UserSettings['documentTips'][K]) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      documentTips: {
+        ...prev.documentTips,
         [key]: value
       }
     }));
@@ -203,17 +222,60 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-8 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* AI Settings Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('settings.aiConfiguration')}
-            </h3>
+        {/* Tab Navigation */}
+        <div className="grid grid-cols-4 border-b border-zinc-200 dark:border-zinc-700">
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`px-3 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === 'ai'
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border-b-2 border-indigo-600'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+            }`}
+          >
+            AI Configuration
+          </button>
+          <button
+            onClick={() => setActiveTab('apis')}
+            className={`px-3 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === 'apis'
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border-b-2 border-indigo-600'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+            }`}
+          >
+            API Providers
+          </button>
+          <button
+            onClick={() => setActiveTab('tips')}
+            className={`px-3 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === 'tips'
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border-b-2 border-indigo-600'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+            }`}
+          >
+            Document Tips
+          </button>
+          <button
+            onClick={() => setActiveTab('ui')}
+            className={`px-3 py-3 text-center text-sm font-medium transition-colors ${
+              activeTab === 'ui'
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 border-b-2 border-indigo-600'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+            }`}
+          >
+            UI Preferences
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {activeTab === 'ai' && (
             <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                AI Configuration
+              </h3>
               {/* Language Style */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  {t('settings.languageStyle')}
+                  Language Style
                 </label>
                 <select
                   value={localSettings.ai.languageStyle}
@@ -230,7 +292,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Summary Length */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  {t('settings.summaryLength')}
+                  Summary Length
                 </label>
                 <select
                   value={localSettings.ai.summaryLength}
@@ -246,7 +308,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Max Topics Count */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  {t('settings.maxTopics')}
+                  Maximum Topics Count
                 </label>
                 <input
                   type="number"
@@ -258,58 +320,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </div>
 
-              {/* Quiz Settings */}
-              {/* <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    {t('settings.defaultMCQuestions')}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={localSettings.ai.quizDefaultMCQuestions}
-                    onChange={(e) => updateAISetting('quizDefaultMCQuestions', parseInt(e.target.value) || 5)}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    {t('settings.defaultWrittenQuestions')}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={localSettings.ai.quizDefaultWrittenQuestions}
-                    onChange={(e) => updateAISetting('quizDefaultWrittenQuestions', parseInt(e.target.value) || 2)}
-                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                </div>
-              </div> */}
-
               {/* AI Prompt Prefix */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  {t('settings.customPrompt')}
+                  Custom AI Prompt
                 </label>
                 <textarea
                   value={localSettings.ai.aiPromptPrefix}
                   onChange={(e) => updateAISetting('aiPromptPrefix', e.target.value)}
-                  placeholder={t('settings.customPromptPlaceholder')}
+                  placeholder="Enter a custom prompt to guide the AI's responses..."
                   rows={3}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                 />
               </div>
             </div>
-          </div>
+          )}
 
-          {/* API Providers Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              AI Providers
-            </h3>
+          {activeTab === 'apis' && (
             <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                AI Providers
+              </h3>
               {/* Existing APIs */}
               {localSettings.apis.length > 0 && (
                 <div className="space-y-3">
@@ -373,99 +404,209 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <APIInputForm onSave={handleSaveAPIConfig} />
               </div>
             </div>
-          </div>
+          )}
 
-          {/* UI Settings Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              {t('settings.uiPreferences')}
-            </h3>
-            <div className="space-y-4">
-              {/* Auto-save Toggle */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {t('settings.autoSave')}
+          {activeTab === 'tips' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                Document Tips Settings
+              </h3>
+              <div className="space-y-6">
+                {/* Enable Document Tips Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Enable AI Document Tips
+                    </label>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Show factual insights and verified information related to analyzed documents
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.ui.enableDocumentTips}
+                      onChange={(e) => updateUISetting('enableDocumentTips', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
                   </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {t('settings.autoSaveDesc')}
+                </div>
+
+                {/* Max Tips Count Input */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Maximum Number of Tips
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={localSettings.documentTips.maxTipsCount}
+                    onChange={(e) => updateDocumentTipsSetting('maxTipsCount', parseInt(e.target.value) || 5)}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    Maximum number of tips to generate (1-10). New tips are appended by default.
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.ui.autoSave}
-                    onChange={(e) => updateUISetting('autoSave', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
 
-              {/* Enable Default Gemini Toggle */}
-              <div className="flex items-center justify-between">
+                {/* Refresh Behavior Radio Buttons */}
+                <fieldset>
+                  <legend className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Refresh Behavior
+                  </legend>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input
+                        id="append"
+                        name="refreshBehavior"
+                        type="radio"
+                        value="append"
+                        checked={localSettings.documentTips.refreshBehavior === 'append'}
+                        onChange={(e) => updateDocumentTipsSetting('refreshBehavior', e.target.value as 'append' | 'replace')}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-zinc-300 dark:border-zinc-600"
+                      />
+                      <label htmlFor="append" className="ml-3 block text-sm text-zinc-700 dark:text-zinc-300">
+                        Append new tips to existing tips
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        id="replace"
+                        name="refreshBehavior"
+                        type="radio"
+                        value="replace"
+                        checked={localSettings.documentTips.refreshBehavior === 'replace'}
+                        onChange={(e) => updateDocumentTipsSetting('refreshBehavior', e.target.value as 'append' | 'replace')}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-zinc-300 dark:border-zinc-600"
+                      />
+                      <label htmlFor="replace" className="ml-3 block text-sm text-zinc-700 dark:text-zinc-300">
+                        Replace existing tips with new ones
+                      </label>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    Choose whether refreshed tips are added to or replace the current tips.
+                  </p>
+                </fieldset>
+
+                {/* Auto Refresh Interval Dropdown */}
                 <div>
-                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {t('settings.enableDefaultGemini')}
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Auto Refresh Interval
                   </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {t('settings.enableDefaultGeminiDesc')}
+                  <select
+                    value={localSettings.documentTips.autoRefreshInterval}
+                    onChange={(e) => updateDocumentTipsSetting('autoRefreshInterval', parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value={0}>Disabled</option>
+                    <option value={5}>Every 5 minutes</option>
+                    <option value={10}>Every 10 minutes</option>
+                    <option value={15}>Every 15 minutes</option>
+                    <option value={30}>Every 30 minutes</option>
+                  </select>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    Automatically refresh document tips at the specified interval (uses cached tips if request fails)
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.ui.enableDefaultGemini}
-                    onChange={(e) => updateUISetting('enableDefaultGemini', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
 
-              {/* Dark Mode (UI indicator only - actual dark mode is handled by the context) */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {t('settings.darkMode')}
+                {/* Show Random Tip Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Show Random Tip During AI Response
+                    </label>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Display one random tip in Q&A chat and quiz exercises while waiting for AI responses
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.documentTips.showRandomTip}
+                      onChange={(e) => updateDocumentTipsSetting('showRandomTip', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
                   </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {t('settings.darkModeDesc')}
-                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.ui.enableDarkMode}
-                    onChange={(e) => updateUISetting('enableDarkMode', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-
-              {/* Enable Document Tips Toggle */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {t('settings.enableDocumentTips') || 'Enable AI Document Tips'}
-                  </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {t('settings.enableDocumentTipsDesc') || 'Show factual insights and verified information related to analyzed documents'}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.ui.enableDocumentTips}
-                    onChange={(e) => updateUISetting('enableDocumentTips', e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
-                </label>
               </div>
             </div>
-          </div>
+          )}
+
+          {activeTab === 'ui' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                UI Preferences
+              </h3>
+              <div className="space-y-6">
+                {/* Auto-save Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Auto-save
+                    </label>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Automatically save your work as you make changes
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.ui.autoSave}
+                      onChange={(e) => updateUISetting('autoSave', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {/* Enable Default Gemini Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Enable Default Gemini
+                    </label>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Use built-in Gemini API when no custom API is configured
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.ui.enableDefaultGemini}
+                      onChange={(e) => updateUISetting('enableDefaultGemini', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {/* Dark Mode Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Dark Mode
+                    </label>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Enable dark theme for the application
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.ui.enableDarkMode}
+                      onChange={(e) => updateUISetting('enableDarkMode', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end space-x-3 p-6 border-t border-zinc-200 dark:border-zinc-700">

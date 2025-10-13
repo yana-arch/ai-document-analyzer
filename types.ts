@@ -303,6 +303,13 @@ export interface APIConfiguration {
   isActive: boolean; // Currently selected
 }
 
+export interface DocumentTipsSettings {
+  autoRefreshInterval: number; // in minutes, 0 = disabled
+  showRandomTip: boolean; // Show 1 random tip during AI response waiting
+  maxTipsCount: number; // Maximum number of tips to generate (1-10)
+  refreshBehavior: 'append' | 'replace'; // Whether to append new tips or replace existing ones
+}
+
 export interface UserSettings {
   ai: AISettings;
   ui: {
@@ -311,5 +318,6 @@ export interface UserSettings {
     enableDefaultGemini: boolean;
     enableDocumentTips: boolean;
   };
+  documentTips: DocumentTipsSettings;
   apis: APIConfiguration[];
 }

@@ -21,6 +21,37 @@ interface AnalysisDashboardProps {
 
 const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, documentText, fileName, settings }) => {
   const { t } = useLanguage();
+  const [refreshingTips, setRefreshingTips] = React.useState(false);
+
+  const handleRefreshTips = React.useCallback(async () => {
+    if (refreshingTips) return;
+
+    setRefreshingTips(true);
+    try {
+      // Import AI service dynamically
+      const { aiService } = await import('../services/aiService');
+      const newTips = await aiService.analyzeDocument(documentText, settings).then(result => result.tips.slice(0, settings.documentTips.maxTipsCount));
+
+      // Update analysis with new tips based on refresh behavior
+      let updatedTips = newTips;
+      if (settings.documentTips.refreshBehavior === 'append') {
+        const currentTips = analysis.tips || [];
+        updatedTips = [...currentTips, ...newTips].slice(0, settings.documentTips.maxTipsCount);
+      }
+
+      // Update analysis with new tips
+      analysis.tips = updatedTips;
+
+      // Force re-render by calling parent component refresh handler if available
+      // This is a basic implementation - in a more advanced app you might use context
+      console.log(`Tips refreshed: ${updatedTips.length} tips now available`);
+
+    } catch (error) {
+      console.error('Failed to refresh tips:', error);
+    } finally {
+      setRefreshingTips(false);
+    }
+  }, [refreshingTips, documentText, settings, analysis]);
 
   const DocumentIcon: React.FC<React.SVGProps<SVGSVGElement>> = memo((props) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
@@ -78,7 +109,11 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
           <MemoizedEntityExtractor />
           {settings.ui.enableDocumentTips && analysis.tips && analysis.tips.length > 0 && (
             <Suspense fallback={<div className="flex items-center justify-center h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Tips...</span></div>}>
-              <DocumentTips tips={analysis.tips} />
+              <DocumentTips
+                tips={analysis.tips}
+                onRefresh={handleRefreshTips}
+                onRefreshLoading={refreshingTips}
+              />
             </Suspense>
           )}
         </div>

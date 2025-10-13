@@ -21,6 +21,13 @@ export const defaultSettings: UserSettings = {
     enableDarkMode: false,
     autoSave: true,
     enableDefaultGemini: true,
+    enableDocumentTips: false,
+  },
+  documentTips: {
+    autoRefreshInterval: 0,
+    showRandomTip: false,
+    maxTipsCount: 5,
+    refreshBehavior: 'append' as const,
   },
   apis: [], // Will be populated with default configurations when first created
 };
@@ -35,6 +42,7 @@ export function loadSettings(): UserSettings {
       return {
         ai: { ...defaultSettings.ai, ...parsedSettings.ai },
         ui: { ...defaultSettings.ui, ...parsedSettings.ui },
+        documentTips: parsedSettings.documentTips || defaultSettings.documentTips,
         apis: parsedSettings.apis || defaultSettings.apis,
       };
     }
