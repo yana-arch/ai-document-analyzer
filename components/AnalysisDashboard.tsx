@@ -22,6 +22,38 @@ interface AnalysisDashboardProps {
 const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, documentText, fileName, settings }) => {
   const { t } = useLanguage();
   const [refreshingTips, setRefreshingTips] = React.useState(false);
+  const [tipsGenerated, setTipsGenerated] = React.useState(!!analysis.tips?.length);
+
+  // Generate tips for documents without tips when settings are enabled
+  React.useEffect(() => {
+    const generateTipsIfNeeded = async () => {
+      if (settings.ui.enableDocumentTips &&
+          !tipsGenerated &&
+          (!analysis.tips || analysis.tips.length === 0)) {
+        setRefreshingTips(true);
+        try {
+          const { aiService } = await import('../services/aiService');
+          const newTips = await aiService.analyzeDocument(documentText, settings)
+            .then(result => result.tips.slice(0, settings.documentTips.maxTipsCount));
+
+          if (newTips && newTips.length > 0) {
+            analysis.tips = newTips;
+            setTipsGenerated(true);
+            console.log(`Generated ${newTips.length} tips for ${fileName}`);
+          }
+        } catch (error) {
+          console.warn('Failed to generate tips for document:', error);
+        } finally {
+          setRefreshingTips(false);
+        }
+      }
+    };
+
+    // Wait a bit before generating tips to allow the component to render first
+    const timeoutId = setTimeout(generateTipsIfNeeded, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [settings.ui.enableDocumentTips, analysis, documentText, settings, fileName, tipsGenerated]);
 
   const handleRefreshTips = React.useCallback(async () => {
     if (refreshingTips) return;
@@ -58,7 +90,7 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
   ));
 
   const MemoizedSummaryPanel = memo(() => <SummaryPanel summary={analysis.summary} />);
-  const MemoizedQnAChat = memo(() => <QnAChat documentText={documentText} fileName={fileName} settings={settings} />);
+  const MemoizedQnAChat = memo(() => <QnAChat documentText={documentText} fileName={fileName} settings={settings} analysis={analysis} />);
   const MemoizedQuizGenerator = memo(() =>
     <QuizGenerator
       documentText={documentText}
@@ -95,7 +127,7 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
         <div className="lg:col-span-2 space-y-6">
           <MemoizedSummaryPanel />
           <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Chat...</span></div>}>
-            <MemoizedQnAChat />
+            <MemoizedQnAChat analysis={analysis} />
           </Suspense>
           <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Quiz...</span></div>}>
             <MemoizedQuizGenerator />
@@ -107,14 +139,30 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
         <div className="space-y-6">
           <MemoizedTopicsCloud />
           <MemoizedEntityExtractor />
-          {settings.ui.enableDocumentTips && analysis.tips && analysis.tips.length > 0 && (
-            <Suspense fallback={<div className="flex items-center justify-center h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Tips...</span></div>}>
-              <DocumentTips
-                tips={analysis.tips}
-                onRefresh={handleRefreshTips}
-                onRefreshLoading={refreshingTips}
-              />
-            </Suspense>
+          {settings.ui.enableDocumentTips && (
+            <>
+              {refreshingTips ? (
+                <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border border-zinc-200 dark:border-zinc-700 p-6">
+                  <div className="flex items-center justify-center space-x-3 text-zinc-600 dark:text-zinc-400">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Generating AI document tips...</span>
+                  </div>
+                </div>
+              ) : (
+                analysis.tips && analysis.tips.length > 0 && (
+                  <Suspense fallback={<div className="flex items-center justify-center h-32 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Tips...</span></div>}>
+                    <DocumentTips
+                      tips={analysis.tips}
+                      onRefresh={handleRefreshTips}
+                      onRefreshLoading={refreshingTips}
+                    />
+                  </Suspense>
+                )
+              )}
+            </>
           )}
         </div>
       </div>

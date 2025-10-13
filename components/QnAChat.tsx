@@ -17,6 +17,15 @@ interface QnAChatProps {
   documentText: string;
   fileName: string;
   settings: UserSettings;
+  analysis?: {
+    tips: Array<{
+      id: string;
+      content: string;
+      type: string;
+      importance: string;
+      category?: string;
+    }>;
+  };
 }
 
 const SendIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -36,7 +45,7 @@ const ReloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) => {
+const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings, analysis }) => {
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -49,6 +58,22 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const { t, locale } = useLanguage();
+
+  // Get random tip based on settings
+  const getRandomTip = React.useCallback(() => {
+    if (!settings.documentTips.showRandomTip || !analysis?.tips || analysis.tips.length === 0) {
+      return null;
+    }
+
+    const availableTips = analysis.tips.filter(tip =>
+      tip.content && tip.content.trim().length > 0 && tip.content.length <= 100 // Short tips only
+    );
+
+    if (availableTips.length === 0) return null;
+
+    const randomIndex = Math.floor(Math.random() * availableTips.length);
+    return availableTips[randomIndex];
+  }, [settings.documentTips.showRandomTip, analysis?.tips]);
 
   // Initialize or load chat session
   useEffect(() => {
@@ -452,15 +477,40 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings }) =
         ))}
 
         {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0" aria-hidden="true">
+          <div className="flex items-start gap-3 max-w-4xl">
+            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md" aria-hidden="true">
               AI
             </div>
-            <div className="max-w-md px-4 py-3 rounded-lg rounded-bl-none bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm">
-              <div className="flex items-center space-x-1" aria-label={t('chat.typingIndicator')}>
-                <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast [animation-delay:-0.3s]"></span>
-                <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast [animation-delay:-0.15s]"></span>
-                <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast"></span>
+            <div className="flex flex-col gap-2 max-w-2xl">
+              {/* Random tip display during AI response */}
+              {(() => {
+                const randomTip = getRandomTip();
+                return randomTip ? (
+                  <div className="px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200/50 dark:border-purple-800/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">💭</span>
+                      <span className="text-xs font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wide">
+                        Fun Fact
+                      </span>
+                    </div>
+                    <p className="text-sm text-purple-800 dark:text-purple-200 leading-relaxed">
+                      {randomTip.content}
+                    </p>
+                    {randomTip.source && (
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1 italic">
+                        — {randomTip.source}
+                      </p>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+              {/* Typing indicator */}
+              <div className="max-w-md px-4 py-3 rounded-lg rounded-bl-none bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 shadow-sm">
+                <div className="flex items-center space-x-1" aria-label={t('chat.typingIndicator')}>
+                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast [animation-delay:-0.3s]"></span>
+                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast [animation-delay:-0.15s]"></span>
+                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse-fast"></span>
+                </div>
               </div>
             </div>
           </div>
