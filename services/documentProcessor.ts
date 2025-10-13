@@ -57,6 +57,50 @@ const extractTextFromDocx = async (arrayBuffer: ArrayBuffer): Promise<string> =>
 };
 
 /**
+ * Extracts transcript text from a YouTube video URL
+ * @param url The YouTube video URL
+ * @returns Extracted transcript text
+ */
+const extractTextFromYouTube = async (url: string): Promise<string> => {
+  try {
+    // Dynamic import for youtube-transcript
+    const { YoutubeTranscript } = await import('youtube-transcript');
+
+    // Extract video ID from URL
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    if (!videoIdMatch) {
+      throw new Error("Invalid YouTube URL format");
+    }
+
+    const videoId = videoIdMatch[1];
+
+    // Fetch transcript
+    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+
+    if (!transcript || transcript.length === 0) {
+      throw new Error("No transcript available for this video");
+    }
+
+    // Combine transcript items into single text
+    const text = transcript
+      .map(item => item.text)
+      .join(' ')
+      .replace(/(\r\n|\n|\r)/gm, ' ') // Replace newlines with spaces
+      .replace(/[\t ]+/g, ' ') // Normalize whitespace
+      .trim();
+
+    if (text.length < 50) {
+      throw new Error("Transcript too short or unavailable");
+    }
+
+    return text;
+  } catch (error) {
+    console.error("Failed to extract text from YouTube:", error);
+    throw new Error("error.youtubeProcessing");
+  }
+};
+
+/**
  * Extracts clean text from an HTML string by parsing it, removing non-content tags, and cleaning up whitespace.
  * @param html The HTML content as a string.
  * @returns The extracted plain text.
@@ -130,7 +174,21 @@ export const extractTextFromSource = (source: File | string): Promise<string> =>
         reject(error instanceof Error ? error : new Error("error.fileProcessing"));
       }
     } else {
-      // Handle URL
+      // Check if it's a YouTube URL first
+      if (source.includes('youtube.com') || source.includes('youtu.be')) {
+        try {
+          const text = await extractTextFromYouTube(source);
+          resolve(text);
+          return;
+        } catch (error) {
+          // YouTube processing failed - do not fall back to web scraping
+          console.error("YouTube processing failed:", error);
+          reject(error);
+          return;
+        }
+      }
+
+      // Handle other URLs (non-YouTube)
       const corsProxies = [
         'https://api.allorigins.win/get?url=',
         'https://thingproxy.freeboard.io/fetch/',

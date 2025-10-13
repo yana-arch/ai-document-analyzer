@@ -67,6 +67,7 @@ const translations = {
       contentRetrieval: "Could not retrieve content from the URL. It might be a private page or temporarily unavailable.",
       textExtraction: "Could not extract meaningful text from the URL. The page might be empty, a non-text document, or rendered in a way that is difficult to parse.",
       urlProcessing: "An error occurred while processing the URL. Please check the URL and try again.",
+      youtubeProcessing: "Failed to extract transcript from YouTube video. The video might be private, unavailable, or have no captions.",
       corsProxyFailed: "All available CORS proxy services failed. This might be due to network restrictions or the target site blocking requests. Try uploading a file instead, or try a different URL."
     },
     uploader: {
@@ -78,12 +79,12 @@ const translations = {
       step2: "Upload a document or enter a public URL below",
       step3: "Wait for AI analysis to complete",
       step4: "Explore summary, chat, and quiz features",
-      urlPlaceholder: "Enter a public URL (e.g., https://...)",
+      urlPlaceholder: "Enter a public URL (e.g., https://..., YouTube video)",
       urlButton: "Analyze URL",
       or: "OR",
       fileUpload: "Click to upload",
       dragAndDrop: "or drag and drop",
-      fileTypes: "Supported: .txt, .md, .html files",
+      fileTypes: "Supported: .txt, .md, .html files, YouTube transcripts",
     },
     dashboard: {
       analysisFor: "Analysis for:",
@@ -222,6 +223,7 @@ const translations = {
       contentRetrieval: "Không thể lấy nội dung từ URL. Đây có thể là một trang riêng tư hoặc tạm thời không có sẵn.",
       textExtraction: "Không thể trích xuất văn bản có ý nghĩa từ URL. Trang có thể trống, không phải tài liệu văn bản, hoặc được hiển thị theo cách khó phân tích.",
       urlProcessing: "Đã xảy ra lỗi khi xử lý URL. Vui lòng kiểm tra lại URL.",
+      youtubeProcessing: "Không thể trích xuất phụ đề từ video YouTube. Video có thể riêng tư, không khả dụng, hoặc không có phụ đề.",
       corsProxyFailed: "Tất cả các dịch vụ proxy CORS có sẵn đều thất bại. Điều này có thể do hạn chế mạng hoặc trang web đích đang chặn các yêu cầu. Hãy thử tải tệp lên thay thế, hoặc thử URL khác."
     },
     uploader: {
@@ -233,12 +235,12 @@ const translations = {
       step2: "Tải lên một tài liệu hoặc nhập URL công khai bên dưới",
       step3: "Chờ quá trình phân tích AI hoàn thành",
       step4: "Khám phá tóm tắt, chat và tính năng kiểm tra kiến thức",
-      urlPlaceholder: "Nhập URL công khai (ví dụ: https://...)",
+      urlPlaceholder: "Nhập URL công khai (ví dụ: https://..., YouTube video)",
       urlButton: "Phân tích URL",
       or: "HOẶC",
       fileUpload: "Nhấp để tải lên",
       dragAndDrop: "hoặc kéo và thả",
-      fileTypes: "Hỗ trợ các tệp: .txt, .md, .html",
+      fileTypes: "Hỗ trợ các tệp: .txt, .md, .html, phụ đề YouTube",
     },
     dashboard: {
       analysisFor: "Phân tích cho:",
