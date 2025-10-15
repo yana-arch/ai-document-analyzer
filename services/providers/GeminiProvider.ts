@@ -1460,4 +1460,348 @@ Provide detailed, constructive feedback that helps the student improve.`;
         return baseCriteria;
     }
   }
+
+  // CV Interview methods implementation
+  async generateInterviewQuestions(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const questionsSchema = {
+      type: Type.OBJECT,
+      properties: {
+        questions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING, description: "The interview question" },
+              type: {
+                type: Type.STRING,
+                enum: ["technical", "behavioral", "situational", "experience"],
+                description: "Type of question"
+              },
+              timeLimit: { type: Type.INTEGER, description: "Time limit in seconds" },
+              category: { type: Type.STRING, description: "Question category" },
+              difficulty: {
+                type: Type.STRING,
+                enum: ["easy", "medium", "hard"],
+                description: "Difficulty level"
+              }
+            },
+            required: ["question", "type", "timeLimit"]
+          },
+          description: "List of interview questions",
+          minItems: 5,
+          maxItems: 10
+        }
+      },
+      required: ["questions"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate 6-8 interview questions in JSON format. Make them specific and relevant to the provided CV content and target position.
+
+IMPORTANT: Return ONLY valid JSON without any additional text or explanation.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: questionsSchema,
+        }
+      });
+
+      const result = response.text.trim();
+
+      // Validate that we got proper JSON
+      try {
+        JSON.parse(result);
+      } catch (parseError) {
+        console.error("Invalid JSON response from Gemini:", result);
+        throw new Error("Invalid response format from AI provider");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Gemini interview questions generation error:", error);
+      throw new Error("Failed to generate interview questions with Gemini.");
+    }
+  }
+
+  async evaluateInterviewAnswer(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const evaluationSchema = {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER, description: "Score from 0-100" },
+        feedback: { type: Type.STRING, description: "Detailed feedback on the answer" },
+        strengths: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of strengths in the answer"
+        },
+        improvements: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Areas for improvement"
+        }
+      },
+      required: ["score", "feedback", "strengths", "improvements"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide a detailed evaluation in JSON format.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: evaluationSchema,
+        }
+      });
+
+      return response.text.trim();
+    } catch (error) {
+      console.error("Gemini interview answer evaluation error:", error);
+      throw new Error("Failed to evaluate interview answer with Gemini.");
+    }
+  }
+
+  async generateInterviewFeedback(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const feedbackSchema = {
+      type: Type.OBJECT,
+      properties: {
+        overallScore: { type: Type.INTEGER, description: "Overall score from 0-100" },
+        positionFit: {
+          type: Type.STRING,
+          enum: ["excellent", "good", "fair", "poor"],
+          description: "How well the candidate fits the position"
+        },
+        strengths: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Candidate's strengths"
+        },
+        weaknesses: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Areas for improvement"
+        },
+        recommendations: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Specific recommendations"
+        },
+        summary: { type: Type.STRING, description: "Overall assessment summary" },
+        detailedAnalysis: {
+          type: Type.OBJECT,
+          properties: {
+            technicalSkills: { type: Type.INTEGER, description: "Technical skills score 0-100" },
+            communication: { type: Type.INTEGER, description: "Communication score 0-100" },
+            problemSolving: { type: Type.INTEGER, description: "Problem solving score 0-100" },
+            experience: { type: Type.INTEGER, description: "Experience score 0-100" },
+            culturalFit: { type: Type.INTEGER, description: "Cultural fit score 0-100" }
+          },
+          description: "Detailed analysis scores"
+        }
+      },
+      required: ["overallScore", "positionFit", "strengths", "weaknesses", "recommendations", "summary"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide comprehensive feedback in JSON format.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: feedbackSchema,
+        }
+      });
+
+      return response.text.trim();
+    } catch (error) {
+      console.error("Gemini interview feedback generation error:", error);
+      throw new Error("Failed to generate interview feedback with Gemini.");
+    }
+  }
+
+  // Preparation methods implementation
+  async generatePreparationResources(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const resourcesSchema = {
+      type: Type.OBJECT,
+      properties: {
+        resources: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: "Resource title" },
+              type: {
+                type: Type.STRING,
+                enum: ["article", "video", "guide", "tips", "checklist"],
+                description: "Type of resource"
+              },
+              content: { type: Type.STRING, description: "Resource content or description" },
+              category: {
+                type: Type.STRING,
+                enum: ["technical", "behavioral", "general", "industry-specific"],
+                description: "Resource category"
+              },
+              difficulty: {
+                type: Type.STRING,
+                enum: ["beginner", "intermediate", "advanced"],
+                description: "Difficulty level"
+              }
+            },
+            required: ["title", "type", "content", "category", "difficulty"]
+          },
+          description: "List of preparation resources",
+          minItems: 3,
+          maxItems: 8
+        }
+      },
+      required: ["resources"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate preparation resources in JSON format.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: resourcesSchema,
+        }
+      });
+
+      return response.text.trim();
+    } catch (error) {
+      console.error("Gemini preparation resources generation error:", error);
+      throw new Error("Failed to generate preparation resources with Gemini.");
+    }
+  }
+
+  async generatePracticeQuestions(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const questionsSchema = {
+      type: Type.OBJECT,
+      properties: {
+        questions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING, description: "The practice question" },
+              type: {
+                type: Type.STRING,
+                enum: ["technical", "behavioral", "situational", "experience"],
+                description: "Type of question"
+              },
+              category: { type: Type.STRING, description: "Question category" },
+              sampleAnswer: { type: Type.STRING, description: "Sample answer for reference" },
+              keyPoints: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Key points to cover in answer"
+              },
+              difficulty: {
+                type: Type.STRING,
+                enum: ["easy", "medium", "hard"],
+                description: "Difficulty level"
+              }
+            },
+            required: ["question", "type", "category", "difficulty"]
+          },
+          description: "List of practice questions",
+          minItems: 5,
+          maxItems: 10
+        }
+      },
+      required: ["questions"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate practice questions in JSON format.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: questionsSchema,
+        }
+      });
+
+      return response.text.trim();
+    } catch (error) {
+      console.error("Gemini practice questions generation error:", error);
+      throw new Error("Failed to generate practice questions with Gemini.");
+    }
+  }
+
+  async evaluatePracticeAnswer(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const evaluationSchema = {
+      type: Type.OBJECT,
+      properties: {
+        score: { type: Type.INTEGER, description: "Score from 0-100" },
+        feedback: { type: Type.STRING, description: "Detailed feedback on the answer" },
+        timeSpent: { type: Type.INTEGER, description: "Time spent in seconds" }
+      },
+      required: ["score", "feedback", "timeSpent"]
+    };
+
+    const fullPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide evaluation in JSON format.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: fullPrompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: evaluationSchema,
+        }
+      });
+
+      return response.text.trim();
+    } catch (error) {
+      console.error("Gemini practice answer evaluation error:", error);
+      throw new Error("Failed to evaluate practice answer with Gemini.");
+    }
+  }
 }

@@ -306,6 +306,144 @@ export interface ExerciseCriteriaGrade {
   weight: number; // percentage weight in overall score
 }
 
+// CV Interview Types
+export type InterviewType = 'technical' | 'behavioral' | 'situational' | 'comprehensive';
+export type QuestionType = 'technical' | 'behavioral' | 'situational' | 'experience';
+export type PositionFit = 'excellent' | 'good' | 'fair' | 'poor';
+
+export interface CVInterview {
+  id: string;
+  cvContent: string;
+  cvFileName?: string;
+  targetPosition: string;
+  interviewType: InterviewType;
+  customPrompt?: string;
+  questions: InterviewQuestion[];
+  answers: InterviewAnswer[];
+  overallScore?: number;
+  feedback?: InterviewFeedback;
+  createdAt: string;
+  completedAt?: string;
+  status: 'preparing' | 'in-progress' | 'completed' | 'cancelled';
+}
+
+export interface InterviewQuestion {
+  id: string;
+  question: string;
+  type: QuestionType;
+  timeLimit: number; // seconds
+  order: number;
+  category?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export interface InterviewAnswer {
+  questionId: string;
+  answer: string;
+  timeSpent: number; // seconds
+  score: number; // 0-100
+  maxScore: number;
+  feedback: string;
+  strengths?: string[];
+  improvements?: string[];
+  submittedAt: string;
+}
+
+export interface InterviewFeedback {
+  overallScore: number;
+  positionFit: PositionFit;
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  summary: string;
+  detailedAnalysis?: {
+    technicalSkills?: number;
+    communication?: number;
+    problemSolving?: number;
+    experience?: number;
+    culturalFit?: number;
+  };
+}
+
+export interface CVParseResult {
+  personalInfo: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+  };
+  experience: Array<{
+    company: string;
+    position: string;
+    duration: string;
+    description: string;
+    startDate?: string;
+    endDate?: string;
+  }>;
+  education: Array<{
+    institution: string;
+    degree: string;
+    field: string;
+    year?: string;
+  }>;
+  skills: string[];
+  summary?: string;
+  rawText: string;
+}
+
+export interface InterviewSession {
+  id: string;
+  currentQuestionIndex: number;
+  startTime: string;
+  endTime?: string;
+  timeRemaining: number; // for current question
+  isPaused: boolean;
+  answers: InterviewAnswer[];
+}
+
+// Preparation and Practice Types
+export interface PreparationResource {
+  id: string;
+  title: string;
+  type: 'article' | 'video' | 'guide' | 'tips' | 'checklist';
+  url?: string;
+  content: string;
+  category: 'technical' | 'behavioral' | 'general' | 'industry-specific';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+}
+
+export interface PracticeQuestion {
+  id: string;
+  question: string;
+  type: QuestionType;
+  category: string;
+  sampleAnswer?: string;
+  keyPoints?: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface PracticeAttempt {
+  id: string;
+  questionId: string;
+  userAnswer: string;
+  score: number;
+  feedback: string;
+  attemptedAt: string;
+  timeSpent: number; // seconds
+}
+
+export interface PreparationSession {
+  id: string;
+  cvContent: string;
+  targetPosition: string;
+  interviewType: InterviewType;
+  resources: PreparationResource[];
+  practiceQuestions: PracticeQuestion[];
+  practiceAttempts: PracticeAttempt[];
+  startedAt: string;
+  completedAt?: string;
+}
+
 export interface ExerciseGradingSession {
   id: string;
   documentText: string;

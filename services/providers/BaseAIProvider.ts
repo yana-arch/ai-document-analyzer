@@ -1,4 +1,4 @@
-import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, Exercise, AISettings, DocumentTip } from '../../types';
+import { AnalysisResult, ChatMessage, QuizQuestion, GradedWrittenAnswer, Exercise, AISettings, DocumentTip, InterviewQuestion, InterviewAnswer, InterviewFeedback, PreparationResource, PracticeQuestion } from '../../types';
 
 export abstract class BaseAIProvider {
   protected providerName: string;
@@ -40,6 +40,20 @@ export abstract class BaseAIProvider {
     submission: any,
     locale: 'en' | 'vi'
   ): Promise<any>;
+
+  // CV Interview methods
+  abstract generateInterviewQuestions(prompt: string, settings?: AISettings): Promise<string>;
+
+  abstract evaluateInterviewAnswer(prompt: string, settings?: AISettings): Promise<string>;
+
+  abstract generateInterviewFeedback(prompt: string, settings?: AISettings): Promise<string>;
+
+  // Preparation methods
+  abstract generatePreparationResources(prompt: string, settings?: AISettings): Promise<string>;
+
+  abstract generatePracticeQuestions(prompt: string, settings?: AISettings): Promise<string>;
+
+  abstract evaluatePracticeAnswer(prompt: string, settings?: AISettings): Promise<string>;
 
   // Enhanced method for smart fillable element generation
   protected abstract generateSmartFillableElements?(documentText: string, exerciseContext: string, locale: 'en' | 'vi'): Promise<any[]>;

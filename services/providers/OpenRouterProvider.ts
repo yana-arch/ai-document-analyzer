@@ -1124,4 +1124,206 @@ Format your response clearly with scores and constructive feedback.`;
       };
     }
   }
+
+  // CV Interview methods implementation for OpenRouter
+  async generateInterviewQuestions(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const questionsPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate 6-8 interview questions in JSON format. Make them specific and relevant to the provided CV content and target position.
+
+Return the response in this exact JSON format:
+{
+  "questions": [
+    {
+      "question": "Question text here?",
+      "type": "technical",
+      "timeLimit": 300,
+      "category": "category_name",
+      "difficulty": "medium"
+    }
+  ]
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: questionsPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter interview questions generation error:", error);
+      throw new Error("Failed to generate interview questions with OpenRouter.");
+    }
+  }
+
+  async evaluateInterviewAnswer(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const evaluationPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide a detailed evaluation in JSON format with this exact structure:
+{
+  "score": 85,
+  "feedback": "Detailed feedback on the answer quality, relevance, and completeness.",
+  "strengths": ["Specific strength 1", "Specific strength 2"],
+  "improvements": ["Area for improvement 1", "Area for improvement 2"]
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: evaluationPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter interview answer evaluation error:", error);
+      throw new Error("Failed to evaluate interview answer with OpenRouter.");
+    }
+  }
+
+  async generateInterviewFeedback(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const feedbackPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide comprehensive feedback in JSON format with this exact structure:
+{
+  "overallScore": 85,
+  "positionFit": "good",
+  "strengths": ["Overall strength 1", "Overall strength 2"],
+  "weaknesses": ["Area for improvement 1", "Area for improvement 2"],
+  "recommendations": ["Specific recommendation 1", "Specific recommendation 2"],
+  "summary": "Overall assessment summary",
+  "detailedAnalysis": {
+    "technicalSkills": 85,
+    "communication": 78,
+    "problemSolving": 82,
+    "experience": 80,
+    "culturalFit": 75
+  }
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: feedbackPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter interview feedback generation error:", error);
+      throw new Error("Failed to generate interview feedback with OpenRouter.");
+    }
+  }
+
+  // Preparation methods implementation for OpenRouter
+  async generatePreparationResources(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const resourcesPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate preparation resources in JSON format with this exact structure:
+{
+  "resources": [
+    {
+      "title": "Resource title",
+      "type": "guide",
+      "content": "Detailed content or description",
+      "category": "technical",
+      "difficulty": "intermediate"
+    }
+  ]
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: resourcesPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter preparation resources generation error:", error);
+      throw new Error("Failed to generate preparation resources with OpenRouter.");
+    }
+  }
+
+  async generatePracticeQuestions(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const questionsPrompt = `${languageInstruction}
+
+${prompt}
+
+Generate practice questions in JSON format with this exact structure:
+{
+  "questions": [
+    {
+      "question": "Sample question?",
+      "type": "technical",
+      "category": "Technical Skills",
+      "sampleAnswer": "Sample answer...",
+      "keyPoints": ["Point 1", "Point 2"],
+      "difficulty": "medium"
+    }
+  ]
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: questionsPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter practice questions generation error:", error);
+      throw new Error("Failed to generate practice questions with OpenRouter.");
+    }
+  }
+
+  async evaluatePracticeAnswer(prompt: string, settings?: AISettings): Promise<string> {
+    const languageInstruction = settings?.languageStyle === 'formal' ? 'Use formal language.' : 'Use conversational language.';
+
+    const evaluationPrompt = `${languageInstruction}
+
+${prompt}
+
+Provide evaluation in JSON format with this exact structure:
+{
+  "score": 85,
+  "feedback": "Detailed feedback on the answer quality, relevance, and completeness.",
+  "timeSpent": 0
+}`;
+
+    const messages = [{
+      role: 'user',
+      content: evaluationPrompt
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, true);
+      return JSON.stringify(response);
+    } catch (error) {
+      console.error("OpenRouter practice answer evaluation error:", error);
+      throw new Error("Failed to evaluate practice answer with OpenRouter.");
+    }
+  }
 }

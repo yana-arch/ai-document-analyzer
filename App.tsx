@@ -9,13 +9,17 @@ import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import PerformanceMonitor from './components/PerformanceMonitor';
+import CVInterviewManager from './components/CVInterviewManager';
 import { useLanguage } from './contexts/LanguageContext';
 import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
 import { aiService } from './services/aiService';
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
+type AppMode = 'analysis' | 'cv-interview';
+
 const App: React.FC = () => {
+  const [currentMode, setCurrentMode] = useState<AppMode>('analysis');
   const [documentText, setDocumentText] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -193,10 +197,37 @@ const App: React.FC = () => {
     <header className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-3">
-            <svg className="w-8 h-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
+          <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3">
+              <svg className="w-8 h-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
+            </div>
+
+            {/* Mode Tabs */}
+            <nav className="hidden sm:flex space-x-1">
+              <button
+                onClick={() => setCurrentMode('analysis')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  currentMode === 'analysis'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                Document Analysis
+              </button>
+              <button
+                onClick={() => setCurrentMode('cv-interview')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  currentMode === 'cv-interview'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                CV Interview
+              </button>
+            </nav>
           </div>
+
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setIsSettingsModalOpen(true)}
@@ -209,7 +240,7 @@ const App: React.FC = () => {
               </svg>
             </button>
             <LanguageSwitcher />
-            {analysisResult && (
+            {analysisResult && currentMode === 'analysis' && (
               <button
                 onClick={handleReset}
                 className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
@@ -233,41 +264,47 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
         <Header />
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
-              <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
-                <Loader size="lg" />
-                <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
-                <ProgressIndicator steps={analysisSteps} currentStep={0} />
-              </div>
-            </div>
-          ) : error ? (
-             <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
-               <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                      <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
-                  <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error)}</p>
-                   <button
-                      onClick={handleReset}
-                      className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
-                  >
-                      {t('error.tryAgain')}
-                  </button>
-              </div>
-            </div>
-          ) : analysisResult && documentText ? (
-            <AnalysisDashboard
-              analysis={analysisResult}
-              documentText={documentText}
-              fileName={fileName || 'Uploaded Document'}
-              settings={settings}
-            />
+          {currentMode === 'cv-interview' ? (
+            <CVInterviewManager settings={settings} />
           ) : (
             <>
-              <DocumentUploader onProcess={handleDocumentProcess} />
-              <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
+                  <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
+                    <Loader size="lg" />
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
+                    <ProgressIndicator steps={analysisSteps} currentStep={0} />
+                  </div>
+                </div>
+              ) : error ? (
+                 <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
+                   <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                          <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
+                      <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error)}</p>
+                       <button
+                          onClick={handleReset}
+                          className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
+                      >
+                          {t('error.tryAgain')}
+                      </button>
+                  </div>
+                </div>
+              ) : analysisResult && documentText ? (
+                <AnalysisDashboard
+                  analysis={analysisResult}
+                  documentText={documentText}
+                  fileName={fileName || 'Uploaded Document'}
+                  settings={settings}
+                />
+              ) : (
+                <>
+                  <DocumentUploader onProcess={handleDocumentProcess} />
+                  <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
+                </>
+              )}
             </>
           )}
         </main>
