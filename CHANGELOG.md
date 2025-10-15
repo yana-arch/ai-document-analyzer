@@ -5,6 +5,15 @@ All notable changes to AI Document Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-10-15
+
+### ✨ Added
+
+- **Speech-to-Text Input**: Introduced speech-to-text capability, allowing users to speak their answers in interview and practice sessions.
+  - Implemented a reusable `useSpeechRecognition` hook for browser Web Speech API integration.
+  - Integrated microphone input and real-time transcription into `InterviewSession.tsx` and `PreparationStep.tsx`.
+  - Added necessary TypeScript declarations for Web Speech API types to ensure type safety.
+
 ## [2.2.0] - 2025-10-15
 
 ### ⚡️ Performance Optimizations
