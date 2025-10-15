@@ -275,6 +275,47 @@ export interface Exercise {
   estimatedTime?: string;
 }
 
+export interface ExerciseSubmission {
+  id: string;
+  exerciseId: string;
+  exerciseType: ExerciseType;
+  userAnswers: Record<string, any>; // Flexible structure for different exercise types
+  submittedAt: string;
+  timeSpent?: number; // in seconds
+}
+
+export interface ExerciseGrade {
+  id: string;
+  submissionId: string;
+  exerciseId: string;
+  overallScore: number;
+  maxScore: number;
+  criteriaGrades: ExerciseCriteriaGrade[];
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  gradedAt: string;
+  gradedBy: 'ai' | 'manual';
+}
+
+export interface ExerciseCriteriaGrade {
+  criterion: string;
+  score: number;
+  maxScore: number;
+  feedback: string;
+  weight: number; // percentage weight in overall score
+}
+
+export interface ExerciseGradingSession {
+  id: string;
+  documentText: string;
+  exercises: Exercise[];
+  submissions: ExerciseSubmission[];
+  grades: ExerciseGrade[];
+  startedAt: string;
+  completedAt?: string;
+}
+
 export type LanguageStyle = 'formal' | 'conversational' | 'technical' | 'simplified';
 export type SummaryLength = 'short' | 'medium' | 'long';
 

@@ -1299,4 +1299,165 @@ Rules for tips:
       }
     ];
   }
+
+  async gradeExercise(
+    documentText: string,
+    exercise: Exercise,
+    submission: any,
+    locale: 'en' | 'vi'
+  ): Promise<any> {
+    const languageInstruction = locale === 'vi' ? 'Grade and provide feedback in Vietnamese.' : 'Grade and provide feedback in English.';
+
+    const gradingSchema = {
+      type: Type.OBJECT,
+      properties: {
+        overallScore: { type: Type.NUMBER, description: "Overall score from 0-10." },
+        maxScore: { type: Type.NUMBER, description: "Maximum possible score, usually 10." },
+        criteriaGrades: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              criterion: { type: Type.STRING, description: "Grading criterion name" },
+              score: { type: Type.NUMBER, description: "Score for this criterion" },
+              maxScore: { type: Type.NUMBER, description: "Maximum score for this criterion" },
+              feedback: { type: Type.STRING, description: "Feedback for this criterion" },
+              weight: { type: Type.NUMBER, description: "Weight of this criterion in percentage" }
+            },
+            required: ["criterion", "score", "maxScore", "feedback", "weight"]
+          },
+          description: "Detailed criteria-based grading"
+        },
+        feedback: { type: Type.STRING, description: "Overall constructive feedback" },
+        strengths: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of strengths in the submission"
+        },
+        improvements: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of areas for improvement"
+        }
+      },
+      required: ["overallScore", "maxScore", "criteriaGrades", "feedback", "strengths", "improvements"]
+    };
+
+    // Create grading criteria based on exercise type
+    const criteria = this.generateGradingCriteria(exercise);
+
+    const prompt = `Grade this exercise submission. ${languageInstruction}
+
+Exercise Details:
+- Type: ${exercise.type}
+- Title: ${exercise.title}
+- Objective: ${exercise.objective}
+- Instructions: ${exercise.instructions.join(', ')}
+
+User Submission:
+${JSON.stringify(submission.userAnswers, null, 2)}
+
+Document Context:
+${documentText}
+
+Grading Criteria:
+${criteria.map(c => `- ${c.name} (${c.weight}%): ${c.description}`).join('\n')}
+
+Provide detailed, constructive feedback that helps the student improve.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: gradingSchema,
+        }
+      });
+
+      const grade = JSON.parse(response.text.trim());
+
+      // Ensure criteria grades match our expected format
+      const validatedGrade = {
+        id: `grade-${Date.now()}`,
+        submissionId: submission.id,
+        exerciseId: exercise.id,
+        overallScore: grade.overallScore,
+        maxScore: grade.maxScore,
+        criteriaGrades: grade.criteriaGrades.map((cg: any) => ({
+          criterion: cg.criterion,
+          score: cg.score,
+          maxScore: cg.maxScore,
+          feedback: cg.feedback,
+          weight: cg.weight
+        })),
+        feedback: grade.feedback,
+        strengths: grade.strengths,
+        improvements: grade.improvements,
+        gradedAt: new Date().toISOString(),
+        gradedBy: 'ai' as const
+      };
+
+      return validatedGrade;
+    } catch (error) {
+      console.error("Gemini exercise grading error:", error);
+      // Return a basic fallback grade
+      return {
+        id: `fallback-grade-${Date.now()}`,
+        submissionId: submission.id,
+        exerciseId: exercise.id,
+        overallScore: 5,
+        maxScore: 10,
+        criteriaGrades: [
+          {
+            criterion: 'Overall Quality',
+            score: 5,
+            maxScore: 10,
+            feedback: 'Grade could not be computed due to technical issues.',
+            weight: 100
+          }
+        ],
+        feedback: 'Unable to provide detailed feedback at this time.',
+        strengths: ['Submission received'],
+        improvements: ['Please try again later'],
+        gradedAt: new Date().toISOString(),
+        gradedBy: 'ai' as const
+      };
+    }
+  }
+
+  private generateGradingCriteria(exercise: Exercise): Array<{name: string, description: string, weight: number}> {
+    const baseCriteria = [
+      { name: 'Understanding', description: 'Demonstrates clear understanding of the exercise requirements', weight: 30 },
+      { name: 'Completeness', description: 'Provides complete and thorough responses', weight: 25 },
+      { name: 'Accuracy', description: 'Information is accurate and relevant', weight: 25 },
+      { name: 'Clarity', description: 'Response is clear and well-structured', weight: 20 }
+    ];
+
+    // Add exercise-type specific criteria
+    switch (exercise.type) {
+      case 'practice':
+        return [
+          ...baseCriteria,
+          { name: 'Practical Application', description: 'Effectively applies concepts in practice', weight: 20 }
+        ];
+      case 'analysis':
+        return [
+          ...baseCriteria,
+          { name: 'Critical Thinking', description: 'Shows analytical depth and insight', weight: 20 }
+        ];
+      case 'application':
+        return [
+          ...baseCriteria,
+          { name: 'Implementation', description: 'Demonstrates practical implementation skills', weight: 20 }
+        ];
+      case 'fillable':
+        return [
+          ...baseCriteria,
+          { name: 'Organization', description: 'Information is well-organized and structured', weight: 20 }
+        ];
+      default:
+        return baseCriteria;
+    }
+  }
 }

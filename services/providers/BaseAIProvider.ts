@@ -34,6 +34,13 @@ export abstract class BaseAIProvider {
 
   abstract generateFillableElements(documentText: string, exerciseContext: string, locale: 'en' | 'vi', settings?: AISettings): Promise<any[]>;
 
+  abstract gradeExercise(
+    documentText: string,
+    exercise: Exercise,
+    submission: any,
+    locale: 'en' | 'vi'
+  ): Promise<any>;
+
   // Enhanced method for smart fillable element generation
   protected abstract generateSmartFillableElements?(documentText: string, exerciseContext: string, locale: 'en' | 'vi'): Promise<any[]>;
 

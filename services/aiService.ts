@@ -113,6 +113,15 @@ class AIService {
     return provider.gradeWrittenAnswer(documentText, question, userAnswer, locale);
   }
 
+  async gradeExercise(documentText: string, exercise: Exercise, submission: any, locale: 'en' | 'vi', settings: UserSettings): Promise<any> {
+    const provider = this.getActiveProvider(settings);
+    if (!provider) {
+      throw new Error('No active AI provider configured.');
+    }
+
+    return provider.gradeExercise(documentText, exercise, submission, locale);
+  }
+
   async generateExercises(text: string, locale: 'en' | 'vi', settings: UserSettings, exerciseCounts: {
     practice: number;
     simulation: number;

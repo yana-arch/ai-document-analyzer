@@ -11,6 +11,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 const QnAChat = lazy(() => import('./QnAChat'));
 const QuizGenerator = lazy(() => import('./QuizGenerator'));
 const ExerciseGenerator = lazy(() => import('./ExerciseGenerator'));
+const ExerciseGrader = lazy(() => import('./ExerciseGrader'));
 
 interface AnalysisDashboardProps {
   analysis: AnalysisResult;
@@ -110,6 +111,36 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
       defaultFillableExercises={settings.ai.exerciseDefaultFillableExercises}
     />
   );
+  const MemoizedExerciseGrader = memo(() => {
+    // For now, we'll show a message that Exercise Grader is available
+    // In a full implementation, we'd need to get exercises from ExerciseGenerator
+    // or maintain a separate state for exercises
+    return (
+      <Card title={t('exercises.grading.title')}>
+        <div className="text-center py-8">
+          <div className="mb-4">
+            <svg className="mx-auto h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
+            {t('exercises.grading.ready')}
+          </h3>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            {t('exercises.grading.description')}
+          </p>
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 mb-4">
+            <p className="text-sm text-indigo-800 dark:text-indigo-300">
+              <strong>{t('exercises.grading.note')}:</strong> {t('exercises.grading.integrationNote')}
+            </p>
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-500">
+            {t('exercises.grading.instructions')}
+          </p>
+        </div>
+      </Card>
+    );
+  });
   const MemoizedTopicsCloud = memo(() => <TopicsCloud topics={analysis.topics} />);
   const MemoizedEntityExtractor = memo(() => <EntityExtractor entities={analysis.entities} sentiment={analysis.sentiment} />);
 
@@ -134,6 +165,9 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = memo(({ analysis, do
           </Suspense>
           <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Exercises...</span></div>}>
             <MemoizedExerciseGenerator />
+          </Suspense>
+          <Suspense fallback={<div className="flex items-center justify-center h-48 bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse"><span className="text-zinc-500">Loading Exercise Grader...</span></div>}>
+            <MemoizedExerciseGrader />
           </Suspense>
         </div>
         <div className="space-y-6">
