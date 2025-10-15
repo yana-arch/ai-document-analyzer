@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserSettings, LanguageStyle, SummaryLength, APIConfiguration, AIProvider } from '../types';
 import { encryptApiKey, decryptApiKey, parseApiConfigurations, validateApiKey } from '../utils/apiKeyUtils';
-import { aiService } from '../services/aiService';
+
 
 interface SettingsModalProps {
   isOpen: boolean;

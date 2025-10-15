@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Exercise, UserSettings, FillableExercise } from '../types';
-import { aiService } from '../services/aiService';
 import { ExerciseExportUtils } from '../utils/exportUtils';
 import { renderMarkdown } from '../utils/markdownUtils';
 import Card from './shared/Card';
@@ -82,6 +81,7 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
     setError(null);
 
     try {
+      const { aiService } = await import('../services/aiService');
       const generatedExercises = await aiService.generateExercises(documentText, locale, settings, {
         practice: practiceCount,
         simulation: simulationCount,

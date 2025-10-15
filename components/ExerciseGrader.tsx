@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Exercise, ExerciseSubmission, ExerciseGrade, UserSettings, ExerciseGradingSession } from '../types';
-import { aiService } from '../services/aiService';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -92,6 +91,7 @@ const ExerciseGrader: React.FC<ExerciseGraderProps> = ({
       // Grade all submissions
       const grades: ExerciseGrade[] = [];
 
+      const { aiService } = await import('../services/aiService');
       for (const submission of gradingSession.submissions) {
         const exercise = exercises.find(ex => ex.id === submission.exerciseId);
         if (!exercise) continue;

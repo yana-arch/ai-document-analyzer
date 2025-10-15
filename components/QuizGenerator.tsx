@@ -8,7 +8,6 @@ import {
   QuizAttempt,
   EnhancedQuizQuestion
 } from '../types';
-import { aiService } from '../services/aiService';
 import { adaptiveLearningService } from '../services/adaptiveLearningService';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
@@ -45,6 +44,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
     setQuizState('generating');
     setError(null);
     try {
+      const { aiService } = await import('../services/aiService');
       const generatedQuestions = await aiService.generateQuiz(documentText, locale, settings, mcCount, writtenCount);
       if (generatedQuestions && generatedQuestions.length > 0) {
         // Simple shuffle
@@ -94,6 +94,7 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
     let maxWrittenScore = 0;
 
     if (writtenQuestionsToGrade.length > 0) {
+        const { aiService } = await import('../services/aiService');
         const gradingPromises = writtenQuestionsToGrade.map(q => {
             const userAnswer = writtenAnswers[q.originalIndex] || "";
             return aiService.gradeWrittenAnswer(documentText, q.question, userAnswer, locale, settings);

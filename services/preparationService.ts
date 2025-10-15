@@ -1,5 +1,5 @@
 import { PreparationResource, PracticeQuestion, PracticeAttempt, PreparationSession, CVParseResult, InterviewType, UserSettings } from '../types';
-import { aiService } from './aiService';
+
 
 export class PreparationService {
   /**
@@ -58,6 +58,7 @@ export class PreparationService {
     `;
 
     try {
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');
@@ -126,6 +127,7 @@ export class PreparationService {
     `;
 
     try {
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');
@@ -192,6 +194,7 @@ export class PreparationService {
     `;
 
     try {
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');

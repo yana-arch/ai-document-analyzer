@@ -1,5 +1,5 @@
 import { CVInterview, InterviewQuestion, InterviewAnswer, InterviewFeedback, InterviewType, QuestionType, CVParseResult } from '../types';
-import { aiService } from './aiService';
+
 import { UserSettings } from '../types';
 
 export class InterviewService {
@@ -135,6 +135,7 @@ export class InterviewService {
 
     try {
       // Use AI service to generate questions
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');
@@ -211,6 +212,7 @@ export class InterviewService {
     `;
 
     try {
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');
@@ -299,6 +301,7 @@ export class InterviewService {
     `;
 
     try {
+      const { aiService } = await import('./aiService');
       const provider = aiService.getActiveProvider(settings);
       if (!provider) {
         throw new Error('No active AI provider configured');

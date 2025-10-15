@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { CVInterview, UserSettings } from '../types';
 import { InterviewService } from '../services/interviewService';
-import CVUploader from './CVUploader';
 import PreparationStep from './PreparationStep';
 import InterviewSession from './InterviewSession';
 import InterviewResults from './InterviewResults';
 import { useLanguage } from '../contexts/LanguageContext';
+import UploadSkeleton from './skeletons/UploadSkeleton';
+
+const CVUploader = lazy(() => import('./CVUploader'));
 
 type InterviewStep = 'upload' | 'preparation' | 'session' | 'results' | 'history';
 
@@ -93,12 +95,14 @@ const CVInterviewManager: React.FC<CVInterviewManagerProps> = ({ settings }) => 
     switch (currentStep) {
       case 'upload':
         return (
-          <CVUploader
-            onCVProcess={handleCVProcess}
-            onTargetPositionChange={setTargetPosition}
-            onInterviewTypeChange={setInterviewType}
-            onCustomPromptChange={setCustomPrompt}
-          />
+          <Suspense fallback={<UploadSkeleton />}>
+            <CVUploader
+              onCVProcess={handleCVProcess}
+              onTargetPositionChange={setTargetPosition}
+              onInterviewTypeChange={setInterviewType}
+              onCustomPromptChange={setCustomPrompt}
+            />
+          </Suspense>
         );
 
       case 'preparation':

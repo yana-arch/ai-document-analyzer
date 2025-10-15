@@ -1,9 +1,11 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
-import DocumentUploader from './components/DocumentUploader';
 import AnalysisDashboard from './components/AnalysisDashboard';
+import UploadSkeleton from './components/skeletons/UploadSkeleton';
+
+const DocumentUploader = lazy(() => import('./components/DocumentUploader'));
 import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
@@ -12,7 +14,7 @@ import PerformanceMonitor from './components/PerformanceMonitor';
 import CVInterviewManager from './components/CVInterviewManager';
 import { useLanguage } from './contexts/LanguageContext';
 import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
-import { aiService } from './services/aiService';
+
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
@@ -82,6 +84,7 @@ const App: React.FC = () => {
       ));
 
       // Step 2-5: AI analysis (we'll mark these as completed together for now)
+      const { aiService } = await import('./services/aiService');
       const result = await aiService.analyzeDocument(text, settings);
       setAnalysisResult(result);
 
@@ -156,16 +159,21 @@ const App: React.FC = () => {
     setFileName(null);
   };
 
-  const handleSaveSettings = useCallback((newSettings: UserSettings) => {
+  const handleSaveSettings = useCallback(async (newSettings: UserSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
     // Update AI service providers when settings change
+    const { aiService } = await import('./services/aiService');
     aiService.updateProviders(newSettings.apis);
   }, []);
 
   // Initialize AI service providers when component mounts
   useEffect(() => {
-    aiService.updateProviders(settings.apis);
+    const updateProviders = async () => {
+      const { aiService } = await import('./services/aiService');
+      aiService.updateProviders(settings.apis);
+    };
+    updateProviders();
   }, [settings.apis]);
   
   const ErrorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -301,7 +309,9 @@ const App: React.FC = () => {
                 />
               ) : (
                 <>
-                  <DocumentUploader onProcess={handleDocumentProcess} />
+                  <Suspense fallback={<UploadSkeleton />}>
+                    <DocumentUploader onProcess={handleDocumentProcess} />
+                  </Suspense>
                   <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
                 </>
               )}

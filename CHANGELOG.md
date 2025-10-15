@@ -5,6 +5,16 @@ All notable changes to AI Document Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-10-15
+
+### ⚡️ Performance Optimizations
+
+- **Optimized Initial Load Time**: Refactored module loading for core features to significantly improve the initial application load time.
+- **Implemented Code Splitting**:
+  - Applied lazy loading to `CVUploader` and `DocumentUploader` components, deferring the loading of heavy document-processing libraries until they are needed.
+  - Resolved a mixed static/dynamic import issue for the core `aiService`, allowing it to be split into a separate chunk.
+- **Reduced Bundle Size**: These changes reduce the initial JavaScript payload, leading to a faster Time-to-Interactive for all users.
+
 ## [2.1.0] - 2025-10-15
 
 ### ✨ Added

@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { aiService } from '../services/aiService';
 import { ChatMessage, UserSettings } from '../types';
 import Card from './shared/Card';
 import { Chat } from '@google/genai';
@@ -102,6 +101,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings, ana
 
         // Initialize chat with conversation context
         const conversationContext = ChatSessionService.getConversationContext(session);
+        const { aiService } = await import('../services/aiService');
         chatRef.current = await aiService.createChat(documentText, locale, settings, conversationContext);
 
       } catch (error) {
@@ -218,6 +218,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings, ana
         });
 
         try {
+          const { aiService } = await import('../services/aiService');
           chatRef.current = await aiService.createChat(documentText, locale, settings, updatedContext);
         } catch (reinitError) {
           console.warn("Failed to reinitialize chat with context:", reinitError);
@@ -250,6 +251,7 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings, ana
 
     try {
       // Create new chat without conversation context
+      const { aiService } = await import('../services/aiService');
       chatRef.current = await aiService.createChat(documentText, locale, settings);
     } catch (error) {
       console.error("Failed to reinitialize chat:", error);
