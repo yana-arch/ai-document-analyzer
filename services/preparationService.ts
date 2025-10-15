@@ -15,9 +15,7 @@ export class PreparationService {
       throw new Error('User settings required for resource generation');
     }
 
-    const resources: PreparationResource[] = [];
-
-    // Base prompt for resource generation
+    // Base prompt for resource generation with links
     const resourcePrompt = `
     Based on this CV content and the target position "${targetPosition}", generate relevant preparation resources for interview practice.
 
@@ -27,21 +25,33 @@ export class PreparationService {
     Target Position: ${targetPosition}
     Interview Type: ${interviewType}
 
-    Generate 5-8 preparation resources including:
+    Generate 6-10 preparation resources including:
     - Study guides and tips specific to the position
     - Common interview questions for this field
     - Industry-specific preparation materials
     - Behavioral and technical preparation resources
+    - Communication and language improvement resources
+    - External learning resources with specific URLs
+
+    For each resource, provide:
+    - Specific URLs to real learning resources when possible
+    - Estimated time to complete
+    - Tags for easy categorization
+    - Star rating (1-5) for resource quality
 
     Return in JSON format:
     {
       "resources": [
         {
-          "title": "Resource title",
-          "type": "guide",
-          "content": "Detailed content or description",
+          "title": "Specific resource title",
+          "type": "article",
+          "url": "https://example.com/specific-guide",
+          "content": "Detailed description of what this resource covers",
           "category": "technical",
-          "difficulty": "intermediate"
+          "difficulty": "intermediate",
+          "tags": ["interview", "technical", "preparation"],
+          "estimatedTime": "30 minutes",
+          "rating": 4
         }
       ]
     }
@@ -63,15 +73,18 @@ export class PreparationService {
         content: resource.content || resource.description || 'Content not available',
         category: resource.category || 'general',
         difficulty: resource.difficulty || 'intermediate',
-        url: resource.url
+        url: resource.url,
+        tags: resource.tags || [],
+        estimatedTime: resource.estimatedTime,
+        rating: resource.rating
       }));
 
     } catch (error) {
       console.error('Error generating preparation resources:', error);
-      // Return fallback resources if AI generation fails
-      return this.generateFallbackResources(targetPosition, interviewType);
+      // Return enhanced fallback resources with links
+      return this.generateEnhancedFallbackResources(targetPosition, interviewType);
     }
-  }
+ }
 
   /**
    * Generate practice questions for interview preparation
@@ -213,41 +226,80 @@ export class PreparationService {
   }
 
   /**
-   * Generate fallback preparation resources
+   * Generate enhanced fallback preparation resources with links
    */
-  private static generateFallbackResources(targetPosition: string, interviewType: InterviewType): PreparationResource[] {
+  private static generateEnhancedFallbackResources(targetPosition: string, interviewType: InterviewType): PreparationResource[] {
     return [
       {
         id: `fallback-resource-1-${Date.now()}`,
         title: `Common ${interviewType} Interview Questions for ${targetPosition}`,
         type: 'guide',
-        content: `This guide covers the most frequently asked ${interviewType} questions for ${targetPosition} roles. Focus on questions related to your experience, problem-solving abilities, and industry knowledge.`,
+        url: 'https://www.indeed.com/career-advice/interviewing/common-interview-questions',
+        content: `This comprehensive guide covers the most frequently asked ${interviewType} questions for ${targetPosition} roles. Focus on questions related to your experience, problem-solving abilities, and industry knowledge.`,
         category: 'general',
-        difficulty: 'intermediate'
+        difficulty: 'intermediate',
+        tags: ['interview', 'questions', 'preparation'],
+        estimatedTime: '45 minutes',
+        rating: 4
       },
       {
         id: `fallback-resource-2-${Date.now()}`,
         title: 'STAR Method for Behavioral Questions',
-        type: 'tips',
-        content: 'Use the STAR method (Situation, Task, Action, Result) to structure your behavioral answers. This helps you provide specific examples that demonstrate your skills and experience.',
+        type: 'guide',
+        url: 'https://www.themuse.com/advice/star-interview-method',
+        content: 'Master the STAR method (Situation, Task, Action, Result) to structure your behavioral answers. This helps you provide specific examples that demonstrate your skills and experience effectively.',
         category: 'behavioral',
-        difficulty: 'beginner'
+        difficulty: 'beginner',
+        tags: ['behavioral', 'STAR', 'communication'],
+        estimatedTime: '20 minutes',
+        rating: 5
       },
       {
         id: `fallback-resource-3-${Date.now()}`,
-        title: 'Technical Preparation Checklist',
-        type: 'checklist',
-        content: 'Review key technical concepts, prepare examples of your work, understand the company\'s tech stack, and be ready to discuss your problem-solving approach.',
+        title: 'Technical Interview Preparation Guide',
+        type: 'course',
+        url: 'https://www.coursera.org/specializations/interviewing',
+        content: 'Comprehensive technical interview preparation covering data structures, algorithms, system design, and coding best practices.',
         category: 'technical',
-        difficulty: 'intermediate'
+        difficulty: 'intermediate',
+        tags: ['technical', 'coding', 'algorithms'],
+        estimatedTime: '2 hours',
+        rating: 4
       },
       {
         id: `fallback-resource-4-${Date.now()}`,
-        title: 'Body Language and Communication Tips',
-        type: 'tips',
-        content: 'Maintain good eye contact, speak clearly and confidently, use positive body language, and show enthusiasm for the role and company.',
+        title: 'Communication Skills for Interviews',
+        type: 'video',
+        url: 'https://www.youtube.com/watch?v=qzv3CegB6f0',
+        content: 'Learn effective communication techniques for interviews including body language, tone of voice, and clear articulation.',
+        category: 'communication',
+        difficulty: 'beginner',
+        tags: ['communication', 'body-language', 'presentation'],
+        estimatedTime: '15 minutes',
+        rating: 4
+      },
+      {
+        id: `fallback-resource-5-${Date.now()}`,
+        title: 'English Grammar for Professional Communication',
+        type: 'website',
+        url: 'https://www.grammarly.com/blog/category/interview/',
+        content: 'Improve your English grammar and professional communication skills specifically for interviews and workplace scenarios.',
+        category: 'language',
+        difficulty: 'beginner',
+        tags: ['english', 'grammar', 'professional'],
+        estimatedTime: '30 minutes',
+        rating: 5
+      },
+      {
+        id: `fallback-resource-6-${Date.now()}`,
+        title: 'Interview Preparation Checklist',
+        type: 'checklist',
+        content: 'Complete checklist covering all aspects of interview preparation: research, practice, materials, mindset, and follow-up.',
         category: 'general',
-        difficulty: 'beginner'
+        difficulty: 'beginner',
+        tags: ['checklist', 'preparation', 'planning'],
+        estimatedTime: '10 minutes',
+        rating: 4
       }
     ];
   }

@@ -405,11 +405,14 @@ export interface InterviewSession {
 export interface PreparationResource {
   id: string;
   title: string;
-  type: 'article' | 'video' | 'guide' | 'tips' | 'checklist';
+  type: 'article' | 'video' | 'guide' | 'tips' | 'checklist' | 'course' | 'book' | 'website';
   url?: string;
   content: string;
-  category: 'technical' | 'behavioral' | 'general' | 'industry-specific';
+  category: 'technical' | 'behavioral' | 'general' | 'industry-specific' | 'language' | 'communication';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
+  tags?: string[];
+  estimatedTime?: string;
+  rating?: number;
 }
 
 export interface PracticeQuestion {

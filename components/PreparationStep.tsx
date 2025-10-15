@@ -99,6 +99,9 @@ const PreparationStep: React.FC<PreparationStepProps> = ({
       case 'guide': return '📚';
       case 'tips': return '💡';
       case 'checklist': return '✅';
+      case 'course': return '🎓';
+      case 'book': return '📖';
+      case 'website': return '🌐';
       default: return '📋';
     }
   };

@@ -11,6 +11,7 @@ A cutting-edge document analysis application powered by Google Gemini AI with a 
 ### 🚀 Core Functionality
 
 - **Document Analysis**: Extract summaries, topics, entities, and sentiment from any document
+- **CV Interview Practice**: Upload a CV and practice for a job interview with AI-generated questions.
 - **Modern ChatGPT-Style Q&A**: Professional chat interface with message editing, timestamps, and smooth UX
 - **Smart Quiz Generation**: Create custom quizzes with AI-powered grading for comprehension testing
 - **Multilingual Support**: Full Vietnamese and English language support with seamless switching

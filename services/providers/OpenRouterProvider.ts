@@ -1241,11 +1241,15 @@ Generate preparation resources in JSON format with this exact structure:
 {
   "resources": [
     {
-      "title": "Resource title",
-      "type": "guide",
-      "content": "Detailed content or description",
+      "title": "Specific resource title with real learning platform",
+      "type": "course",
+      "url": "https://real-learning-platform.com/specific-course",
+      "content": "Detailed description of what this resource covers and why it's valuable",
       "category": "technical",
-      "difficulty": "intermediate"
+      "difficulty": "intermediate",
+      "tags": ["interview", "technical", "preparation"],
+      "estimatedTime": "45 minutes",
+      "rating": 4
     }
   ]
 }`;

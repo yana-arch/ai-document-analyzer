@@ -1687,7 +1687,7 @@ Provide comprehensive feedback in JSON format.`;
 
 ${prompt}
 
-Generate preparation resources in JSON format.`;
+Generate preparation resources in JSON format with specific URLs to real learning resources when possible.`;
 
     try {
       const response = await this.ai.models.generateContent({

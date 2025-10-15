@@ -5,6 +5,19 @@ All notable changes to AI Document Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-10-15
+
+### ✨ Added
+
+- **CV Interview Practice Feature**: Allows users to upload their CV, specify a target job position, and practice for a job interview with AI-generated questions.
+- **AI-Powered Exercise Grading**: Introduces an `ExerciseGrader` component to automatically grade user-submitted exercises.
+- **Document Tips Refresh**: Implemented a manual refresh for document tips and enhanced settings management for tips.
+- **Enhanced Conversation Threading**: (Moved from upcoming)
+- **Advanced Code Execution with Syntax Highlighting**: (Moved from upcoming)
+- **Custom AI Model Selection**: (Moved from upcoming)
+- **Advanced File Comparison Tools**: (Moved from upcoming)
+- **Collaboration Features**: (Moved from upcoming)
+
 ## [2.0.0] - 2025-10-10
 
 ### 🎉 Major Release: ChatGPT-Inspired Modern Interface
@@ -129,16 +142,13 @@ See commit history for detailed changes prior to this release.
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 2.1.0 | 2025-10-15 | CV Interview Practice, AI Grading, and more |
 | 2.0.0 | 2025-10-10 | Major UI/UX overhaul with ChatGPT-inspired interface |
 | 1.0.0 | 2025-01-XX | Initial release with core functionality |
 
-## 🚀 Upcoming Features (v2.1.0)
+## 🚀 Upcoming Features (v2.2.0)
 
-- Enhanced conversation threading
-- Advanced code execution with syntax highlighting
-- Custom AI model selection
-- Advanced file comparison tools
-- Collaboration features
+- More to come!
 
 ---
 
