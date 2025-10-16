@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { HistoryItem } from '../types';
+import { HistoryItem, DocumentHistoryItem, InterviewHistoryItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { exportHistory, importHistory, mergeHistory } from '../utils/historyUtils';
 
@@ -8,6 +8,59 @@ interface HistoryListProps {
   onLoadItem: (item: HistoryItem) => void;
   onImportHistory: (mergedHistory: HistoryItem[]) => void;
 }
+
+const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+);
+
+const UserIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+);
+
+const HistoryListItem: React.FC<{ item: HistoryItem, onLoadItem: (item: HistoryItem) => void, t: (key: string) => string }> = ({ item, onLoadItem, t }) => {
+    const commonButtonClasses = "w-full text-left p-4 rounded-xl flex justify-between items-center hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800";
+
+    if (item.type === 'document') {
+        return (
+            <button
+                key={`${item.fileName}_${item.date}`}
+                onClick={() => onLoadItem(item)}
+                className={`${commonButtonClasses} focus:ring-indigo-500`}
+            >
+                <div>
+                    <p className="font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-md" title={item.fileName}>{item.fileName}</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                        {t('history.analyzedOn')} {new Date(item.date).toLocaleString()}
+                    </p>
+                </div>
+                <ClockIcon className="w-5 h-5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+            </button>
+        );
+    }
+
+    if (item.type === 'interview') {
+        return (
+            <button
+                key={item.interview.id}
+                onClick={() => onLoadItem(item)}
+                className={`${commonButtonClasses} focus:ring-purple-500`}
+            >
+                <div>
+                    <p className="font-semibold text-purple-600 dark:text-purple-400 truncate max-w-md" title={item.interview.targetPosition}>
+                        {t('history.interviewFor')} {item.interview.targetPosition}
+                    </p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                        {t('history.completedOn')} {new Date(item.date).toLocaleString()}
+                    </p>
+                </div>
+                <UserIcon className="w-5 h-5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+            </button>
+        );
+    }
+
+    return null;
+}
+
 
 const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHistory }) => {
   const { t } = useLanguage();
@@ -50,10 +103,6 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
   if (items.length === 0) {
     return null;
   }
-  
-  const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-  );
 
   return (
     <div className="max-w-4xl mx-auto mt-16">
@@ -95,20 +144,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
       </div>
 
       <div className="bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50 p-6 space-y-4">
-        {items.map((item) => (
-          <button
-            key={item.fileName + item.date}
-            onClick={() => onLoadItem(item)}
-            className="w-full text-left p-4 rounded-xl flex justify-between items-center hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500"
-          >
-            <div>
-              <p className="font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-md" title={item.fileName}>{item.fileName}</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                {t('history.analyzedOn')} {new Date(item.date).toLocaleString()}
-              </p>
-            </div>
-            <ClockIcon className="w-5 h-5 text-zinc-400 dark:text-zinc-500 shrink-0" />
-          </button>
+        {items.map((item, index) => (
+          <HistoryListItem key={index} item={item} onLoadItem={onLoadItem} t={t} />
         ))}
       </div>
     </div>

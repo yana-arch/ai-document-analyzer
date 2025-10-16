@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
-import { AnalysisResult, HistoryItem, UserSettings } from './types';
+import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
@@ -14,7 +13,6 @@ import PerformanceMonitor from './components/PerformanceMonitor';
 import CVInterviewManager from './components/CVInterviewManager';
 import { useLanguage } from './contexts/LanguageContext';
 import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
-
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
@@ -30,6 +28,7 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [loadedInterview, setLoadedInterview] = useState<CVInterview | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([
     { label: 'Extracting document text...', status: 'waiting' },
     { label: 'Analyzing content with AI...', status: 'waiting' },
@@ -52,7 +51,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleDocumentProcess = useCallback(async (source: File | string) => {
-    // Reset analysis steps
     setAnalysisSteps([
       { label: 'Extracting document text...', status: 'waiting' },
       { label: 'Analyzing content with AI...', status: 'waiting' },
@@ -70,7 +68,6 @@ const App: React.FC = () => {
     setFileName(currentFileName);
 
     try {
-      // Step 1: Extract document text
       setAnalysisSteps(prev => prev.map((step, idx) =>
         idx === 0 ? { ...step, status: 'in-progress' as const } : step
       ));
@@ -83,7 +80,6 @@ const App: React.FC = () => {
         idx === 1 ? { ...step, status: 'in-progress' as const } : step
       ));
 
-      // Step 2-5: AI analysis (we'll mark these as completed together for now)
       const { aiService } = await import('./services/aiService');
       const result = await aiService.analyzeDocument(text, settings);
       setAnalysisResult(result);
@@ -93,12 +89,12 @@ const App: React.FC = () => {
         status: idx >= 1 && idx <= 4 ? 'completed' as const : step.status
       })));
 
-      // Step 6: Save results
       setAnalysisSteps(prev => prev.map((step, idx) =>
         idx === 5 ? { ...step, status: 'in-progress' as const } : step
       ));
 
-      const newHistoryItem: HistoryItem = {
+      const newHistoryItem: DocumentHistoryItem = {
+        type: 'document',
         fileName: currentFileName,
         analysis: result,
         documentText: text,
@@ -106,7 +102,7 @@ const App: React.FC = () => {
       };
 
       setHistory(prevHistory => {
-        const updatedHistory = [newHistoryItem, ...prevHistory.filter(item => item.fileName !== currentFileName)];
+        const updatedHistory = [newHistoryItem, ...prevHistory.filter(item => item.type === 'document' && item.fileName !== currentFileName)];
         try {
           localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
         } catch (err) {
@@ -121,7 +117,6 @@ const App: React.FC = () => {
 
     } catch (err) {
       console.error("Processing failed:", err);
-      // Mark all steps as error if anything fails
       setAnalysisSteps(prev => prev.map(step => ({ ...step, status: 'error' as const })));
       if (err instanceof Error && err.message.startsWith('error.')) {
         setError(err.message);
@@ -134,13 +129,43 @@ const App: React.FC = () => {
   }, [settings.apis, settings.ui]);
   
   const handleLoadHistory = useCallback(async (item: HistoryItem) => {
-    // Set the document immediately for display - tips will be generated in AnalysisDashboard if needed
-    setAnalysisResult(item.analysis);
-    setDocumentText(item.documentText);
-    setFileName(item.fileName);
-    setError(null);
-    setIsLoading(false);
+    if (item.type === 'document') {
+        setCurrentMode('analysis');
+        setAnalysisResult(item.analysis);
+        setDocumentText(item.documentText);
+        setFileName(item.fileName);
+        setError(null);
+        setIsLoading(false);
+        setLoadedInterview(null);
+    } else if (item.type === 'interview') {
+        setLoadedInterview(item.interview);
+        setCurrentMode('cv-interview');
+    }
   }, []);
+
+  const handleInterviewComplete = (interview: CVInterview) => {
+    const newHistoryItem: InterviewHistoryItem = {
+        type: 'interview',
+        interview: interview,
+        date: new Date().toISOString(),
+    };
+
+    setHistory(prevHistory => {
+        const filteredHistory = prevHistory.filter(item => {
+            if (item.type === 'interview') {
+                return item.interview.id !== interview.id;
+            }
+            return true;
+        });
+        const updatedHistory = [newHistoryItem, ...filteredHistory];
+        try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+        } catch (err) {
+            console.error("Failed to save history to localStorage", err);
+        }
+        return updatedHistory;
+    });
+  };
 
   const handleImportHistory = (mergedHistory: HistoryItem[]) => {
     setHistory(mergedHistory);
@@ -157,17 +182,17 @@ const App: React.FC = () => {
     setIsLoading(false);
     setError(null);
     setFileName(null);
+    setLoadedInterview(null);
+    setCurrentMode('analysis');
   };
 
   const handleSaveSettings = useCallback(async (newSettings: UserSettings) => {
     setSettings(newSettings);
     saveSettings(newSettings);
-    // Update AI service providers when settings change
     const { aiService } = await import('./services/aiService');
     aiService.updateProviders(newSettings.apis);
   }, []);
 
-  // Initialize AI service providers when component mounts
   useEffect(() => {
     const updateProviders = async () => {
       const { aiService } = await import('./services/aiService');
@@ -211,10 +236,9 @@ const App: React.FC = () => {
               <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
             </div>
 
-            {/* Mode Tabs */}
             <nav className="hidden sm:flex space-x-1">
               <button
-                onClick={() => setCurrentMode('analysis')}
+                onClick={() => { setCurrentMode('analysis'); setLoadedInterview(null); }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                   currentMode === 'analysis'
                     ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
@@ -266,14 +290,13 @@ const App: React.FC = () => {
     <ErrorBoundary
       onError={(error, errorInfo) => {
         console.error('App Error:', error, errorInfo);
-        // Here you could send error to tracking service
       }}
     >
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
         <Header />
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
           {currentMode === 'cv-interview' ? (
-            <CVInterviewManager settings={settings} />
+            <CVInterviewManager settings={settings} initialInterview={loadedInterview} onInterviewComplete={handleInterviewComplete} />
           ) : (
             <>
               {isLoading ? (
@@ -327,7 +350,6 @@ const App: React.FC = () => {
           t={t}
         />
 
-        {/* Performance Monitor - chỉ hiển thị ở development mode */}
         {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
       </div>
     </ErrorBoundary>

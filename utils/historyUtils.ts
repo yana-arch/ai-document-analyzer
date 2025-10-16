@@ -1,6 +1,4 @@
-
-
-import { HistoryItem } from '../types';
+import { HistoryItem, DocumentHistoryItem, InterviewHistoryItem } from '../types';
 
 export const exportHistory = async (history: HistoryItem[]): Promise<void> => {
   try {
@@ -41,15 +39,22 @@ export const importHistory = (file: File): Promise<HistoryItem[]> => {
 
         // Validate each history item
         for (const item of importedHistory) {
-          if (!item.fileName || !item.analysis || !item.documentText || !item.date) {
-            throw new Error('Invalid history item structure');
+          if (!item.type || !item.date) {
+            throw new Error('Invalid history item structure: missing type or date');
           }
-          // Basic validation for required fields
-          if (typeof item.fileName !== 'string' || typeof item.documentText !== 'string' || typeof item.date !== 'string') {
-            throw new Error('Invalid data types in history item');
-          }
-          if (typeof item.analysis !== 'object' || item.analysis === null) {
-            throw new Error('Invalid analysis data in history item');
+          if (item.type === 'document') {
+            const docItem = item as DocumentHistoryItem;
+            if (!docItem.fileName || !docItem.analysis || !docItem.documentText) {
+              throw new Error('Invalid document history item structure');
+            }
+          } else if (item.type === 'interview') {
+            const interviewItem = item as InterviewHistoryItem;
+            if (!interviewItem.interview) {
+              throw new Error('Invalid interview history item structure');
+            }
+          } else {
+            // For forward compatibility, we can choose to ignore unknown types
+            console.warn(`Unknown history item type found: ${(item as any).type}`);
           }
         }
 
@@ -68,20 +73,25 @@ export const importHistory = (file: File): Promise<HistoryItem[]> => {
   });
 };
 
+const getHistoryItemKey = (item: HistoryItem): string => {
+  if (item.type === 'document') {
+    return `doc_${item.fileName}_${item.date}`;
+  }
+  return `iv_${item.interview.id}`;
+};
+
 export const mergeHistory = (currentHistory: HistoryItem[], importedHistory: HistoryItem[]): HistoryItem[] => {
-  // Create a map to avoid duplicates based on fileName + date combination
+  // Create a map to avoid duplicates
   const historyMap = new Map<string, HistoryItem>();
 
   // Add current history first
   currentHistory.forEach(item => {
-    const key = `${item.fileName}_${item.date}`;
-    historyMap.set(key, item);
+    historyMap.set(getHistoryItemKey(item), item);
   });
 
-  // Add imported items, overwriting if they have the same fileName + date
+  // Add imported items, overwriting if they have the same key
   importedHistory.forEach(item => {
-    const key = `${item.fileName}_${item.date}`;
-    historyMap.set(key, item);
+    historyMap.set(getHistoryItemKey(item), item);
   });
 
   // Convert back to array and sort by date (newest first)

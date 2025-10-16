@@ -176,6 +176,8 @@ const translations = {
     history: {
       title: "Previously Analyzed",
       analyzedOn: "Analyzed on:",
+      interviewFor: "Interview for:",
+      completedOn: "Completed on:",
       exportButton: "Export History",
       importButton: "Import History",
       exportSuccess: "History exported successfully",
@@ -389,6 +391,8 @@ const translations = {
     history: {
       title: "Đã phân tích trước đây",
       analyzedOn: "Phân tích vào:",
+      interviewFor: "Phỏng vấn cho:",
+      completedOn: "Hoàn thành vào:",
       exportButton: "Xuất Lịch sử",
       importButton: "Nhập Lịch sử",
       exportSuccess: "Xuất lịch sử thành công",

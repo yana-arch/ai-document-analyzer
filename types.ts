@@ -39,12 +39,21 @@ export interface ChatSession {
   settings?: UserSettings;
 }
 
-export interface HistoryItem {
+export interface DocumentHistoryItem {
+  type: 'document';
   analysis: AnalysisResult;
   documentText: string;
   fileName: string;
   date: string;
 }
+
+export interface InterviewHistoryItem {
+  type: 'interview';
+  interview: CVInterview;
+  date: string;
+}
+
+export type HistoryItem = DocumentHistoryItem | InterviewHistoryItem;
 
 export interface MultipleChoiceQuestion {
   type: 'multiple-choice';
