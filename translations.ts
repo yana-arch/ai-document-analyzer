@@ -173,6 +173,9 @@ const translations = {
       aiFeedback: "AI Feedback:",
       noAnswer: "(No answer provided)"
     },
+    interview: {
+        practiceAgain: "Practice Again",
+    },
     history: {
       title: "Previously Analyzed",
       analyzedOn: "Analyzed on:",
@@ -337,6 +340,9 @@ const translations = {
       completed: "Đã hoàn thành",
       answered: "Đã trả lời",
       finishQuiz: "Hoàn thành bài kiểm tra",
+    },
+    interview: {
+        practiceAgain: "Luyện tập lại",
     },
 
     exercises: {

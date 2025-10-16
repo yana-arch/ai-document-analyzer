@@ -5,6 +5,22 @@ All notable changes to AI Document Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-10-16
+
+### ✨ Added
+
+- **Integrated History**: Unified history for both document analyses and CV interviews, allowing users to view and reload past sessions from a single, filterable list.
+
+### 🔄 Changed
+
+- **Speech-to-Text UX**: Enhanced the speech-to-text experience with a live transcript preview, a clearer "listening" indicator, and better error handling.
+- **History System**: Refactored the history management logic to support multiple types of history items (documents and interviews) in a type-safe manner.
+- **UI Consolidation**: Removed the separate, isolated interview history page in favor of the new integrated history list.
+
+### 🐛 Fixed
+
+- **Interview Timer**: Corrected a bug where the interview timer could cause an infinite evaluation loop if the user did not submit their answer. The timer now correctly auto-submits the current answer when time expires.
+
 ## [2.3.0] - 2025-10-15
 
 ### ✨ Added
