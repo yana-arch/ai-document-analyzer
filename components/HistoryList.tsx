@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState, useMemo } from 'react';
 import { HistoryItem, DocumentHistoryItem, InterviewHistoryItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { exportHistory, importHistory, mergeHistory } from '../utils/historyUtils';
+import ProgressiveDisclosure from './shared/ProgressiveDisclosure';
 
 interface HistoryListProps {
   items: HistoryItem[];
@@ -297,8 +298,20 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
     <div className="max-w-6xl mx-auto mt-16">
       <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-6 text-center">{t('history.title')}</h3>
 
-      {/* Controls Section */}
-      <div className="bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50 p-6 mb-6">
+      {/* Progressive Controls Section - Simplified để giảm cognitive load */}
+      <ProgressiveDisclosure
+        title={
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-8.0 0 7 7 0 018 0z" />
+            </svg>
+            {t('history.searchFilter') || 'Search & Filter'} <span className="ml-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">Optional</span>
+          </div>
+        }
+        defaultExpanded={false}
+        variant="card"
+        className="mb-6"
+      >
         {/* Search and Filter Row */}
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           {/* Search */}
@@ -335,7 +348,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
         </div>
 
         {/* Sort and View Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div className="flex gap-2">
             {(['date', 'name', 'type'] as SortType[]).map((sort) => (
               <button
@@ -381,7 +394,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="flex justify-center gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
           <button
             onClick={handleExportHistory}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2"
@@ -415,7 +428,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
             className="hidden"
           />
         </div>
-      </div>
+      </ProgressiveDisclosure>
 
       {/* Results Summary */}
       <div className="mb-4 text-center">

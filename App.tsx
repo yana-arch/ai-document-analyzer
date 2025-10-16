@@ -3,6 +3,7 @@ import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistory
 import { extractTextFromSource } from './services/documentProcessor';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
+import { FocusManager } from './components/shared/FocusManager';
 
 const DocumentUploader = lazy(() => import('./components/DocumentUploader'));
 import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
@@ -292,7 +293,10 @@ const App: React.FC = () => {
         console.error('App Error:', error, errorInfo);
       }}
     >
-      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
+        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
+        {/* Focus Manager giúp duy trì focus khi navigate */}
+        <FocusManager />
+
         <Header />
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
           {currentMode === 'cv-interview' ? (
