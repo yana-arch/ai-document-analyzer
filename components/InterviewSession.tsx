@@ -34,18 +34,21 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   const [currentFeedback, setCurrentFeedback] = useState<InterviewAnswer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t, locale } = useLanguage();
-  const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition({ lang: locale });
+  const { isListening, transcript, startListening, stopListening, isSupported, error } = useSpeechRecognition({ lang: locale });
   const currentAnswerRef = useRef(currentAnswer);
+  const listeningRef = useRef(isListening);
 
   useEffect(() => {
     currentAnswerRef.current = currentAnswer;
   }, [currentAnswer]);
 
   useEffect(() => {
-    if (transcript) {
-      setCurrentAnswer(prev => (prev ? prev + ' ' : '') + transcript);
+    // When listening stops, append the final transcript to the answer.
+    if (listeningRef.current && !isListening && transcript) {
+      setCurrentAnswer(prev => (prev ? prev.trim() + ' ' : '') + transcript.trim());
     }
-  }, [transcript]);
+    listeningRef.current = isListening;
+  }, [isListening, transcript]);
 
   const currentQuestion = interview.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === interview.questions.length - 1;
@@ -133,21 +136,6 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     }
   };
 
-  const handleNextQuestion = useCallback(() => {
-    if (isLastQuestion) {
-      // Complete interview - only if not already completing
-      if (!isSubmitting) {
-        handleCompleteInterview();
-      }
-    } else {
-      // Move to next question
-      setCurrentQuestionIndex(prev => prev + 1);
-      setCurrentAnswer('');
-      setShowFeedback(false);
-      setCurrentFeedback(null);
-    }
-  }, [isLastQuestion, isSubmitting]);
-
   const handleCompleteInterview = useCallback(async () => {
     // Prevent multiple calls
     if (isSubmitting) return;
@@ -192,6 +180,21 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
       setIsSubmitting(false);
     }
   }, [interview, settings, onComplete, isSubmitting]);
+
+  const handleNextQuestion = useCallback(() => {
+    if (isLastQuestion) {
+      // Complete interview - only if not already completing
+      if (!isSubmitting) {
+        handleCompleteInterview();
+      }
+    } else {
+      // Move to next question
+      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentAnswer('');
+      setShowFeedback(false);
+      setCurrentFeedback(null);
+    }
+  }, [isLastQuestion, isSubmitting, handleCompleteInterview]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -290,24 +293,38 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
                 value={currentAnswer}
                 onChange={(e) => setCurrentAnswer(e.target.value)}
                 placeholder="Take your time to provide a thoughtful answer, or use the microphone to speak..."
-                className="w-full h-48 px-4 py-3 pr-12 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none"
+                className={`w-full h-48 px-4 py-3 pr-24 bg-zinc-50 dark:bg-zinc-900 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none ${
+                  isListening ? 'border-indigo-500' : 'border-zinc-300 dark:border-zinc-600'
+                }`}
                 disabled={isSubmitting}
               />
+              {isListening && (
+                <div className="absolute inset-2 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-md p-4 pointer-events-none">
+                  <p className="text-zinc-700 dark:text-zinc-300 italic">{transcript || 'Listening...'}</p>
+                </div>
+              )}
               {isSupported && (
-                <button
-                  type="button"
-                  onClick={isListening ? stopListening : startListening}
-                  className={`absolute bottom-3 right-3 p-2 rounded-full transition-colors ${
-                    isListening
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-indigo-500 text-white hover:bg-indigo-600'
-                  }`}
-                  aria-label={isListening ? 'Stop recording' : 'Start recording'}
-                >
-                  <MicrophoneIcon className="w-5 h-5" />
-                </button>
+                <div className="absolute bottom-3 right-3 flex items-center space-x-2">
+                  {isListening && (
+                    <span className="text-sm text-indigo-600 dark:text-indigo-400 animate-pulse">Listening...</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={isListening ? stopListening : startListening}
+                    className={`p-2 rounded-full transition-colors ${
+                      isListening
+                        ? 'bg-red-500 text-white'
+                        : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                    }`}
+                    aria-label={isListening ? 'Stop recording' : 'Start recording'}
+                  >
+                    <MicrophoneIcon className="w-5 h-5" />
+                  </button>
+                </div>
               )}
             </div>
+            {error && <p className="text-red-500 text-sm mt-2">Speech recognition error: {error}</p>}
+            {!isSupported && <p className="text-yellow-600 text-sm mt-2">Speech recognition is not supported in your browser.</p>}
 
             <div className="flex justify-between items-center mt-4">
               <div className="text-sm text-zinc-600 dark:text-zinc-400">

@@ -40,13 +40,11 @@ const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): SpeechRec
     recognition.continuous = continuous;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        }
-      }
-      setTranscript(prev => prev + finalTranscript);
+      const transcript = Array.from(event.results)
+        .map(result => result[0])
+        .map(result => result.transcript)
+        .join('');
+      setTranscript(transcript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
