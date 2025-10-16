@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CVInterview, InterviewQuestion, InterviewAnswer, UserSettings } from '../types';
 import { InterviewService } from '../services/interviewService';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -35,6 +35,11 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t, locale } = useLanguage();
   const { isListening, transcript, startListening, stopListening, isSupported } = useSpeechRecognition({ lang: locale });
+  const currentAnswerRef = useRef(currentAnswer);
+
+  useEffect(() => {
+    currentAnswerRef.current = currentAnswer;
+  }, [currentAnswer]);
 
   useEffect(() => {
     if (transcript) {
@@ -46,32 +51,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   const isLastQuestion = currentQuestionIndex === interview.questions.length - 1;
   const progress = ((currentQuestionIndex + 1) / interview.questions.length) * 100;
 
-  // Timer effect
-  useEffect(() => {
-    if (!currentQuestion || isAnswering || showFeedback) return;
-
-    setTimeRemaining(currentQuestion.timeLimit);
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          // Auto-submit when time runs out
-          handleTimeUp();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentQuestionIndex, isAnswering, showFeedback]);
-
   const handleTimeUp = useCallback(async () => {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       // Submit empty answer when time runs out
-      const answer = currentAnswer.trim() || 'No answer provided (time expired)';
+      const answer = currentAnswerRef.current.trim() || 'No answer provided (time expired)';
 
       const feedback = await InterviewService.evaluateAnswer(
         currentQuestion,
@@ -96,7 +82,26 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [currentAnswer, currentQuestion, interview, settings, isSubmitting]);
+  }, [currentQuestion, interview, settings, isSubmitting]);
+
+  // Timer effect
+  useEffect(() => {
+    if (!currentQuestion || isAnswering || showFeedback) return;
+
+    setTimeRemaining(currentQuestion.timeLimit);
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          // Auto-submit when time runs out
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentQuestionIndex, isAnswering, showFeedback]);
 
   const handleSubmitAnswer = async () => {
     if (isSubmitting || !currentAnswer.trim()) return;
