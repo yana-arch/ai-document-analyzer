@@ -1,3 +1,13 @@
+declare global {
+  interface RedisClient {
+    on(event: string, listener: Function): void;
+    set(key: string, value: string): Promise<string>;
+    get(key: string): Promise<string | null>;
+    del(key: string): Promise<number>;
+    quit(): Promise<void>;
+  }
+}
+
 interface CacheEntry {
   data: any;
   timestamp: number;
@@ -5,6 +15,9 @@ interface CacheEntry {
   size: number; // estimated size in bytes
   accessCount: number;
   lastAccessed: number;
+  tags?: string[]; // For advanced filtering and management
+  priority?: 'low' | 'normal' | 'high'; // For eviction priority
+  compressed?: boolean; // Whether data is compressed
 }
 
 interface CacheStats {
@@ -14,24 +27,78 @@ interface CacheStats {
   totalHits: number;
   totalMisses: number;
   evictions: number;
+  compressionRatio?: number;
+  redisConnected?: boolean;
+  memoryUsage?: {
+    used: number;
+    available: number;
+    percentage: number;
+  };
+}
+
+interface CacheOptions {
+  ttl?: number;
+  tags?: string[];
+  priority?: 'low' | 'normal' | 'high';
+  compress?: boolean;
+  skipRedis?: boolean; // For sensitive data
 }
 
 class CacheService {
   private cache = new Map<string, CacheEntry>();
-  private maxSize: number = 50 * 1024 * 1024; // 50MB default
+  private maxSize: number = 100 * 1024 * 1024; // Increased to 100MB
   private currentSize: number = 0;
+  private redisClient: any = null;
+  private useRedis: boolean = false;
+  private compressionThreshold: number = 1024; // Compress data > 1KB
   private stats = {
     totalHits: 0,
     totalMisses: 0,
     evictions: 0,
     sets: 0,
-    deletes: 0
+    deletes: 0,
+    compressedEntries: 0,
+    originalSize: 0,
+    compressedSize: 0
   };
 
-  constructor(maxSizeMB: number = 50) {
+  constructor(maxSizeMB: number = 100) {
     this.maxSize = maxSizeMB * 1024 * 1024;
+    this.initializeRedis();
     // Auto cleanup every 2 minutes
     setInterval(() => this.cleanup(), 2 * 60 * 1000);
+  }
+
+  /**
+   * Initialize Redis connection if available
+   */
+  private async initializeRedis(): Promise<void> {
+    try {
+      // Check if Redis is available (in production environment)
+      if (typeof window === 'undefined' && process.env.REDIS_URL) {
+        // Dynamic import to avoid issues in browser environment
+        // const redis = await import('redis');
+        // const Redis = redis.default;
+
+        // this.redisClient = new Redis(process.env.REDIS_URL);
+        // this.useRedis = true;
+
+        // this.redisClient.on('error', (err: any) => {
+        //   console.warn('Redis connection error:', err);
+        //   this.useRedis = false;
+        // });
+
+        // this.redisClient.on('connect', () => {
+        //   console.log('Redis connected successfully');
+        //   this.useRedis = true;
+        // });
+
+        console.log('Redis support disabled in development');
+      }
+    } catch (error) {
+      console.log('Redis not available, using in-memory cache only');
+      this.useRedis = false;
+    }
   }
 
   /**
@@ -235,7 +302,10 @@ class CacheService {
       totalMisses: 0,
       evictions: 0,
       sets: 0,
-      deletes: 0
+      deletes: 0,
+      compressedEntries: 0,
+      originalSize: 0,
+      compressedSize: 0
     };
   }
 

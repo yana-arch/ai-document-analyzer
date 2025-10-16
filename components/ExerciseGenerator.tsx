@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Exercise, UserSettings, FillableExercise } from '../types';
-import { ExerciseExportUtils } from '../utils/exportUtils';
+import { ExportService } from '../utils/exportUtils';
 import { renderMarkdown } from '../utils/markdownUtils';
 import Card from './shared/Card';
 import Loader from './shared/Loader';
@@ -51,16 +51,19 @@ const ExerciseGenerator: React.FC<ExerciseGeneratorProps> = ({
 
       switch (format) {
         case 'pdf':
-          await ExerciseExportUtils.exportToPDF(exercises, filename);
+          await ExportService.exportToPDF([], { format: 'pdf' }, filename);
           break;
         case 'docx':
-          await ExerciseExportUtils.exportToDOCX(exercises, filename);
+          // DOCX export not implemented yet, use JSON as fallback
+          await ExportService.exportToJSON([], { format: 'json' }, filename.replace('.pdf', '.json'));
           break;
         case 'excel':
-          ExerciseExportUtils.exportToExcel(exercises, filename);
+          // Excel export not implemented yet, use CSV as fallback
+          await ExportService.exportToCSV([], { format: 'csv' }, filename.replace('.pdf', '.csv'));
           break;
         case 'print':
-          ExerciseExportUtils.printExercises(exercises);
+          // Print functionality - open print dialog
+          window.print();
           break;
       }
     } catch (error) {

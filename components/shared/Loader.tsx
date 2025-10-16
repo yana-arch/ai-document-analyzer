@@ -1,41 +1,104 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LoaderProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   message?: string;
+  variant?: 'spinner' | 'dots' | 'pulse' | 'bars';
+  speed?: 'slow' | 'normal' | 'fast';
 }
 
-const Loader: React.FC<LoaderProps> = ({ size = 'md', message }) => {
+const Loader: React.FC<LoaderProps> = ({
+  size = 'md',
+  message,
+  variant = 'spinner',
+  speed = 'normal'
+}) => {
   const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-16 h-16',
-    lg: 'w-24 h-24'
+    sm: 'w-4 h-4',
+    md: 'w-8 h-8',
+    lg: 'w-16 h-16',
+    xl: 'w-24 h-24'
+  };
+
+  const speedClasses = {
+    slow: 'animate-spin-slow',
+    normal: 'animate-spin',
+    fast: 'animate-spin-fast'
+  };
+
+  const renderSpinner = () => (
+    <svg
+      className={`${sizeClasses[size]} text-indigo-600 ${speedClasses[speed]}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
+
+  const renderDots = () => (
+    <div className="flex space-x-1">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className={`${sizeClasses[size]} bg-indigo-600 rounded-full animate-bounce`}
+          style={{ animationDelay: `${i * 0.1}s` }}
+        />
+      ))}
+    </div>
+  );
+
+  const renderPulse = () => (
+    <div className={`${sizeClasses[size]} bg-indigo-600 rounded-full animate-pulse`} />
+  );
+
+  const renderBars = () => (
+    <div className="flex space-x-1">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className={`w-2 bg-indigo-600 rounded-full animate-pulse`}
+          style={{
+            height: size === 'sm' ? '16px' : size === 'md' ? '24px' : size === 'lg' ? '32px' : '48px',
+            animationDelay: `${i * 0.1}s`,
+            animationDuration: '0.8s'
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  const renderLoader = () => {
+    switch (variant) {
+      case 'dots': return renderDots();
+      case 'pulse': return renderPulse();
+      case 'bars': return renderBars();
+      default: return renderSpinner();
+    }
   };
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <svg
-        className={`${sizeClasses[size]} text-indigo-600 animate-spin-slow`}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
-      {message && <p className="text-center text-zinc-600 dark:text-zinc-400 animate-pulse">{message}</p>}
+      {renderLoader()}
+      {message && (
+        <p className="text-center text-zinc-600 dark:text-zinc-400 animate-pulse text-sm">
+          {message}
+        </p>
+      )}
     </div>
   );
 };

@@ -54,6 +54,39 @@ const translations = {
         excel: "Export Excel",
         print: "Print"
       },
+      grading: {
+        title: "Exercise Grading",
+        ready: "Ready to grade",
+        description: "Grade student exercises and provide detailed feedback",
+        cardTitle: "Grade Exercises",
+        startGrading: "Start Grading",
+        progress: "Exercise",
+        completed: "completed",
+        previous: "Previous",
+        next: "Next",
+        submitExercise: "Submit Answer",
+        submitted: "Submitted",
+        finishGrading: "Finish Grading",
+        results: "Grading Results",
+        averageScore: "Average Score",
+        feedback: "Feedback",
+        totalExercises: "Total Exercises",
+        avgTime: "Avg Time",
+        exercisesToGrade: "Exercises to Grade",
+        note: "Note:",
+        integrationNote: "This grading system integrates with AI to provide detailed feedback and scoring.",
+        instructions: "Instructions",
+        objective: "Objective",
+        practicePlaceholder: "Enter your practice answer here...",
+        analysisPlaceholder: "Enter your analysis here...",
+        applicationPlaceholder: "Enter your application here...",
+        fillableInstructions: "Complete the fillable elements below:",
+        fillablePlaceholder: "Enter your response for the fillable exercise...",
+        notSupported: "Exercise type not supported for grading",
+        error: {
+          api: "Failed to grade exercises. Please try again."
+        }
+      },
     },
     loader: {
       analyzing: "Analyzing document... this may take a moment.",
@@ -187,6 +220,20 @@ const translations = {
       importSuccess: "History imported and merged successfully",
       importError: "Failed to import history. Invalid file format.",
       importFileType: "Please select a valid history JSON file",
+      searchPlaceholder: "Search history...",
+      filter: {
+        all: "All",
+        document: "Documents",
+        interview: "Interviews"
+      },
+      sort: {
+        date: "Date",
+        name: "Name",
+        type: "Type"
+      },
+      showingResults: "Showing",
+      noResults: "No results found",
+      noResultsDesc: "Try adjusting your search or filter criteria"
     },
     settings: {
       title: "Settings",
@@ -393,6 +440,39 @@ const translations = {
         excel: "Xuất Excel",
         print: "In"
       },
+      grading: {
+        title: "Chấm điểm bài tập",
+        ready: "Sẵn sàng chấm điểm",
+        description: "Chấm điểm bài tập của học sinh và cung cấp phản hồi chi tiết",
+        cardTitle: "Chấm điểm bài tập",
+        startGrading: "Bắt đầu chấm điểm",
+        progress: "Bài tập",
+        completed: "đã hoàn thành",
+        previous: "Trước",
+        next: "Tiếp theo",
+        submitExercise: "Nộp câu trả lời",
+        submitted: "Đã nộp",
+        finishGrading: "Hoàn thành chấm điểm",
+        results: "Kết quả chấm điểm",
+        averageScore: "Điểm trung bình",
+        feedback: "Phản hồi",
+        totalExercises: "Tổng bài tập",
+        avgTime: "Thời gian TB",
+        exercisesToGrade: "Bài tập cần chấm",
+        note: "Lưu ý:",
+        integrationNote: "Hệ thống chấm điểm này tích hợp với AI để cung cấp phản hồi và điểm số chi tiết.",
+        instructions: "Hướng dẫn",
+        objective: "Mục tiêu",
+        practicePlaceholder: "Nhập câu trả lời thực hành của bạn vào đây...",
+        analysisPlaceholder: "Nhập phân tích của bạn vào đây...",
+        applicationPlaceholder: "Nhập ứng dụng của bạn vào đây...",
+        fillableInstructions: "Hoàn thành các phần tử có thể điền bên dưới:",
+        fillablePlaceholder: "Nhập phản hồi của bạn cho bài tập điền thông tin...",
+        notSupported: "Loại bài tập không được hỗ trợ để chấm điểm",
+        error: {
+          api: "Không thể chấm điểm bài tập. Vui lòng thử lại."
+        }
+      },
     },
     history: {
       title: "Đã phân tích trước đây",
@@ -405,6 +485,20 @@ const translations = {
       importSuccess: "Nhập và gộp lịch sử thành công",
       importError: "Không thể nhập lịch sử. Định dạng tệp không hợp lệ.",
       importFileType: "Vui lòng chọn tệp JSON lịch sử hợp lệ",
+      searchPlaceholder: "Tìm kiếm lịch sử...",
+      filter: {
+        all: "Tất cả",
+        document: "Tài liệu",
+        interview: "Phỏng vấn"
+      },
+      sort: {
+        date: "Ngày",
+        name: "Tên",
+        type: "Loại"
+      },
+      showingResults: "Hiển thị",
+      noResults: "Không tìm thấy kết quả",
+      noResultsDesc: "Thử điều chỉnh tìm kiếm hoặc bộ lọc"
     },
     settings: {
       title: "Cài đặt",
