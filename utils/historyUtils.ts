@@ -77,7 +77,8 @@ const getHistoryItemKey = (item: HistoryItem): string => {
   if (item.type === 'document') {
     return `doc_${item.fileName}_${item.date}`;
   }
-  return `iv_${item.interview.id}`;
+  // Add null check to prevent runtime errors when interview is undefined
+  return `iv_${item.interview?.id || 'unknown'}_${item.date}`;
 };
 
 export const mergeHistory = (currentHistory: HistoryItem[], importedHistory: HistoryItem[]): HistoryItem[] => {
