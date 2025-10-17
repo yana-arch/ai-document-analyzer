@@ -95,13 +95,22 @@ class AIService {
     return provider.createChat(documentText, locale, conversationContext);
   }
 
-  async generateQuiz(text: string, locale: 'en' | 'vi', settings: UserSettings, mcCount: number, writtenCount: number): Promise<QuizQuestion[]> {
+  async generateQuiz(text: string, locale: 'en' | 'vi', settings: UserSettings, mcCount: number, writtenCount: number, mode: 'default' | 'full-coverage' = 'default'): Promise<QuizQuestion[]> {
     const provider = this.getActiveProvider(settings);
     if (!provider) {
       throw new Error('No active AI provider configured.');
     }
 
     return provider.generateQuiz(text, locale, mcCount, writtenCount);
+  }
+
+  async generateFullCoverageQuestions(text: string, locale: 'en' | 'vi', settings: UserSettings): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }> {
+    const provider = this.getActiveProvider(settings);
+    if (!provider) {
+      throw new Error('No active AI provider configured.');
+    }
+
+    return provider.generateFullCoverageQuestions(text, locale);
   }
 
   async gradeWrittenAnswer(documentText: string, question: string, userAnswer: string, locale: 'en' | 'vi', settings: UserSettings): Promise<GradedWrittenAnswer> {

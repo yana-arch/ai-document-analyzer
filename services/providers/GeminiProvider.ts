@@ -477,6 +477,121 @@ Document: ${text}`;
     }
   }
 
+  async generateFullCoverageQuestions(text: string, locale: 'en' | 'vi'): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }> {
+    const languageInstruction = locale === 'vi' ? 'Questions in Vietnamese.' : 'Questions in English.';
+
+    const coverageSchema = {
+      type: Type.OBJECT,
+      properties: {
+        estimatedQuestions: { type: Type.INTEGER, description: "Estimated number of questions that can be generated for full coverage" },
+        questions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of all possible questions covering the entire document content"
+        }
+      },
+      required: ["estimatedQuestions", "questions"]
+    };
+
+    const prompt = `Generate a comprehensive list of all possible questions that cover every aspect of the document content. ${languageInstruction}
+
+Requirements:
+- Create questions that comprehensively cover ALL topics, facts, and concepts in the document
+- Generate as many questions as needed for complete coverage
+- Questions should be suitable for a knowledge check quiz
+- Each question should be clear and answerable based on document content
+- Include questions about key concepts, facts, details, and important information
+- Do not limit to 30 questions - generate as many as needed for complete coverage
+
+Document: ${text}`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: coverageSchema,
+        }
+      });
+
+      const data = JSON.parse(response.text.trim());
+      const questions = data.questions || [];
+      return {
+        questions,
+        hasMore: false, // Gemini generates all at once, no batching needed
+        nextBatchToken: undefined
+      };
+    } catch (error) {
+      console.error("Gemini full coverage questions generation error:", error);
+      throw new Error("Failed to generate full coverage questions with Gemini.");
+    }
+  }
+
+  async generateFullCoverageQuestionsBatch(text: string, locale: 'en' | 'vi', batchToken?: string): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }> {
+    // Gemini can handle large content, so we request smaller chunks based on batch token
+    // For simplicity, we'll generate based on batch size
+    const languageInstruction = locale === 'vi' ? 'Questions in Vietnamese.' : 'Questions in English.';
+
+    const batchSize = 20; // Request smaller batches
+    const startIndex = parseInt(batchToken || '0') * batchSize;
+
+    const coverageSchema = {
+      type: Type.OBJECT,
+      properties: {
+        questions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: `Generate batch ${parseInt(batchToken || '0') + 1} of ${batchSize} questions`
+        },
+        totalEstimated: {
+          type: Type.INTEGER,
+          description: "Estimated total questions that could be generated"
+        }
+      },
+      required: ["questions", "totalEstimated"]
+    };
+
+    const prompt = `Generate a batch of ${batchSize} comprehensive questions covering different aspects of the document. Focus on questions ${startIndex + 1}-${startIndex + batchSize}. ${languageInstruction}
+
+Requirements:
+- Create questions that comprehensively cover different important aspects of the document
+- Start from question ${startIndex + 1} onwards
+- Generate exactly ${batchSize} questions or fewer if the document content is exhausted
+- Questions should be suitable for a knowledge check quiz
+- Each question should be clear and answerable based on document content
+
+Document: ${text.substring(0, 10000)}...`; // Limit text to avoid token issues
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: coverageSchema,
+        }
+      });
+
+      const data = JSON.parse(response.text.trim());
+      const questions = data.questions || [];
+      const totalEstimated = data.totalEstimated || 100;
+
+      // Check if there's more content to generate
+      const currentTotal = startIndex + questions.length;
+      const hasMore = currentTotal < totalEstimated;
+
+      return {
+        questions,
+        hasMore,
+        nextBatchToken: hasMore ? (parseInt(batchToken || '0') + 1).toString() : undefined
+      };
+    } catch (error) {
+      console.error("Gemini full coverage questions batch generation error:", error);
+      throw new Error("Failed to generate batch of full coverage questions with Gemini.");
+    }
+  }
+
   async gradeWrittenAnswer(documentText: string, question: string, userAnswer: string, locale: 'en' | 'vi'): Promise<GradedWrittenAnswer> {
     const languageInstruction = locale === 'vi' ? 'Feedback in Vietnamese.' : 'Feedback in English.';
 

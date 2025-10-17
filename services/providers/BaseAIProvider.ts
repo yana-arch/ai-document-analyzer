@@ -17,6 +17,9 @@ export abstract class BaseAIProvider {
 
   abstract generateQuiz(text: string, locale: 'en' | 'vi', mcCount: number, writtenCount: number): Promise<QuizQuestion[]>;
 
+  abstract generateFullCoverageQuestions(text: string, locale: 'en' | 'vi'): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }>;
+  abstract generateFullCoverageQuestionsBatch(text: string, locale: 'en' | 'vi', batchToken?: string): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }>;
+
   abstract gradeWrittenAnswer(
     documentText: string,
     question: string,

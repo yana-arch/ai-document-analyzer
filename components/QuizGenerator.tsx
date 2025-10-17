@@ -6,7 +6,9 @@ import {
   WrittenAnswerQuestion,
   UserSettings,
   QuizAttempt,
-  EnhancedQuizQuestion
+  EnhancedQuizQuestion,
+  FullCoverageQuiz,
+  FullCoverageQuestion
 } from '../types';
 import { adaptiveLearningService } from '../services/adaptiveLearningService';
 import Card from './shared/Card';
@@ -21,6 +23,13 @@ interface QuizGeneratorProps {
 }
 
 const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, defaultMCQuestions = 5, defaultWrittenQuestions = 0 }) => {
+  // Full Coverage Quiz State
+  const [quizMode, setQuizMode] = useState<'default' | 'full-coverage'>('default');
+  const [fullCoverageQuestions, setFullCoverageQuestions] = useState<string[]>([]);
+  const [fullCoverageBatchIndex, setFullCoverageBatchIndex] = useState(0);
+  const [totalFullCoverageQuestions, setTotalFullCoverageQuestions] = useState(0);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
   const [quizState, setQuizState] = useState<'idle' | 'generating' | 'taking' | 'grading' | 'finished'>('idle');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -162,39 +171,159 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
     setError(null);
   };
 
+  const handleNextBatch = () => {
+    if (quizMode === 'full-coverage' && fullCoverageBatchIndex < Math.ceil(totalFullCoverageQuestions / 30) - 1) {
+      const nextBatchIndex = fullCoverageBatchIndex + 1;
+      const startIndex = nextBatchIndex * 30;
+      const endIndex = Math.min(startIndex + 30, totalFullCoverageQuestions);
+      const nextBatch = fullCoverageQuestions.slice(startIndex, endIndex);
+      const convertedQuestions = nextBatch.map(q => ({ type: 'written' as const, question: q }));
+
+      setQuestions(convertedQuestions);
+      setFullCoverageBatchIndex(nextBatchIndex);
+      setCurrentQuestionIndex(0);
+      setSelectedMCAnswers({});
+      setWrittenAnswers({});
+      setGradedAnswers({});
+      setQuizState('taking');
+    }
+  };
+
   const currentQuestion = questions[currentQuestionIndex];
+
+  const handleGenerateFullCoverageQuestions = async () => {
+    setIsGeneratingQuestions(true);
+    setError(null);
+    try {
+      const { aiService } = await import('../services/aiService');
+      const fullCoverageResult = await aiService.generateFullCoverageQuestions(documentText, locale, settings);
+
+      console.log('Generated full coverage questions:', fullCoverageResult.questions.length);
+
+      if (fullCoverageResult.questions && fullCoverageResult.questions.length > 0) {
+        setFullCoverageQuestions(fullCoverageResult.questions);
+        setTotalFullCoverageQuestions(fullCoverageResult.questions.length);
+        setFullCoverageBatchIndex(0);
+        setQuizMode('full-coverage');
+
+        // Save the full coverage quiz to the question bank service
+        const quiz: FullCoverageQuiz = {
+          id: `fcq-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          documentId: documentText.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_'), // Simple document ID
+          questions: fullCoverageResult.questions.map(q => ({ question: q })),
+          totalQuestions: fullCoverageResult.questions.length,
+          estimatedBatchCount: Math.ceil(fullCoverageResult.questions.length / 30),
+          status: 'completed',
+          completedAt: new Date().toISOString()
+        };
+
+        const { questionBankService } = await import('../services/questionBankService');
+        questionBankService.saveFullCoverageQuiz(quiz);
+
+        // Generate first batch (first 30 questions)
+        const firstBatch = fullCoverageResult.questions.slice(0, 30);
+        const convertedQuestions = firstBatch.map(q => ({ type: 'written' as const, question: q }));
+
+        setQuestions(convertedQuestions);
+        setQuizState('taking');
+        setCurrentQuestionIndex(0);
+        setSelectedMCAnswers({});
+        setWrittenAnswers({});
+        setGradedAnswers({});
+        setScore({ mc: 0, written: 0, maxWritten: 0 });
+      } else {
+        throw new Error("No questions generated. The AI didn't return any questions.");
+      }
+    } catch (err) {
+      console.error('Full coverage generation error:', err);
+      setError('quiz.error.api');
+    } finally {
+      setIsGeneratingQuestions(false);
+    }
+  };
 
   const renderIdle = () => (
     <div className="text-center py-8">
       <h4 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300">{t('quiz.idleTitle')}</h4>
       <p className="mt-2 text-zinc-500 dark:text-zinc-400">{t('quiz.idleSubtitle')}</p>
-      
-      <div className="mt-8 max-w-sm mx-auto grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="mc-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('quiz.options.mc')}</label>
-          <select id="mc-count" value={mcCount} onChange={e => setMcCount(Number(e.target.value))} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-            <option>3</option>
-            <option>5</option>
-            <option>10</option>
-            <option>30</option>
-          </select>
+
+      {/* Quiz Mode Selection */}
+      <div className="mt-6">
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            onClick={() => setQuizMode('default')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              quizMode === 'default'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+            }`}
+          >
+            Standard Quiz
+          </button>
+          <button
+            onClick={() => setQuizMode('full-coverage')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              quizMode === 'full-coverage'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+            }`}
+          >
+            Full Coverage
+          </button>
         </div>
-        <div>
-          <label htmlFor="written-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('quiz.options.written')}</label>
-          <select id="written-count" value={writtenCount} onChange={e => setWrittenCount(Number(e.target.value))} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-            <option>0</option>
-            <option>2</option>
-            <option>3</option>
-          </select>
-        </div>
+
+        {quizMode === 'default' ? (
+          <>
+            <div className="mt-8 max-w-sm mx-auto grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="mc-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('quiz.options.mc')}</label>
+                <select id="mc-count" value={mcCount} onChange={e => setMcCount(Number(e.target.value))} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                  <option>3</option>
+                  <option>5</option>
+                  <option>10</option>
+                  <option>30</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="written-count" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">{t('quiz.options.written')}</label>
+                <select id="written-count" value={writtenCount} onChange={e => setWrittenCount(Number(e.target.value))} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                  <option>0</option>
+                  <option>2</option>
+                  <option>3</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              onClick={handleGenerateQuiz}
+              className="mt-8 px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
+            >
+              {t('quiz.generateButton')}
+            </button>
+          </>
+        ) : (
+          <div className="mt-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h5 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                Full Coverage Mode
+              </h5>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Generates comprehensive questions covering every aspect of the document content.
+                Questions will be processed in batches if there are more than 30.
+              </p>
+            </div>
+
+            <button
+              onClick={handleGenerateFullCoverageQuestions}
+              disabled={isGeneratingQuestions}
+              className="mt-6 px-6 py-3 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-blue-500 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingQuestions ? 'Generating Questions...' : 'Generate Full Coverage Quiz'}
+            </button>
+          </div>
+        )}
       </div>
-      
-      <button
-        onClick={handleGenerateQuiz}
-        className="mt-8 px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
-      >
-        {t('quiz.generateButton')}
-      </button>
+
       {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{t(error)}</p>}
     </div>
   );
@@ -344,12 +473,29 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
       })()}
 
       <div className="text-center">
-        <button
-          onClick={handleFinishQuiz}
-          className="px-6 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-green-500 transition-all shadow-sm hover:shadow-md"
-        >
-          {t('quiz.finishQuiz')}
-        </button>
+        {quizMode === 'full-coverage' && fullCoverageBatchIndex < Math.ceil(totalFullCoverageQuestions / 30) - 1 ? (
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={handleNextBatch}
+              className="px-6 py-2 font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-blue-500 transition-all shadow-sm hover:shadow-md"
+            >
+              Next Batch ({Math.min(30, totalFullCoverageQuestions - (fullCoverageBatchIndex + 1) * 30)} questions)
+            </button>
+            <button
+              onClick={handleFinishQuiz}
+              className="px-6 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-green-500 transition-all shadow-sm hover:shadow-md"
+            >
+              {t('quiz.finishQuiz')}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleFinishQuiz}
+            className="px-6 py-2 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-green-500 transition-all shadow-sm hover:shadow-md"
+          >
+            {t('quiz.finishQuiz')}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -143,6 +143,24 @@ export interface QuizAttempt {
   }>;
 }
 
+// Full Coverage Quiz Types
+export interface FullCoverageQuestion {
+  question: string;
+  keyTopic?: string;
+}
+
+export interface FullCoverageQuiz {
+  id: string;
+  documentId: string;
+  questions: FullCoverageQuestion[];
+  totalQuestions: number;
+  estimatedBatchCount: number;
+  completedAt?: string;
+  status: 'generating' | 'completed' | 'error';
+}
+
+export type QuizMode = 'default' | 'full-coverage';
+
 export interface LearningProgress {
   topic: string;
   totalAttempts: number;

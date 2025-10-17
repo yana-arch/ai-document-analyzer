@@ -1,4 +1,4 @@
-import { QuestionBank, EnhancedQuizQuestion, QuestionTemplate } from '../types';
+import { QuestionBank, EnhancedQuizQuestion, QuestionTemplate, FullCoverageQuiz, DocumentHistoryItem } from '../types';
 
 export class QuestionBankService {
   private static instance: QuestionBankService;
@@ -326,6 +326,47 @@ export class QuestionBankService {
     return true;
   }
 
+  // Full Coverage Quiz Management
+  saveFullCoverageQuiz(quiz: FullCoverageQuiz): string {
+    const quizzes = this.loadFullCoverageQuizzes();
+    quizzes.set(quiz.documentId, quiz);
+    this.saveFullCoverageQuizzes(quizzes);
+    return quiz.id;
+  }
+
+  getFullCoverageQuiz(documentId: string): FullCoverageQuiz | null {
+    const quizzes = this.loadFullCoverageQuizzes();
+    return quizzes.get(documentId) || null;
+  }
+
+  associateQuizWithHistory(quiz: FullCoverageQuiz, historyItem?: DocumentHistoryItem): boolean {
+    try {
+      // Save the quiz
+      this.saveFullCoverageQuiz(quiz);
+      return true;
+    } catch (error) {
+      console.error('Failed to associate quiz with history:', error);
+      return false;
+    }
+  }
+
+  private loadFullCoverageQuizzes(): Map<string, FullCoverageQuiz> {
+    const saved = localStorage.getItem('full_coverage_quizzes');
+    const map = new Map<string, FullCoverageQuiz>();
+    if (saved) {
+      const data = JSON.parse(saved);
+      Object.entries(data).forEach(([key, value]) => {
+        map.set(key, value as FullCoverageQuiz);
+      });
+    }
+    return map;
+  }
+
+  private saveFullCoverageQuizzes(quizzes: Map<string, FullCoverageQuiz>): void {
+    const data = Object.fromEntries(quizzes);
+    localStorage.setItem('full_coverage_quizzes', JSON.stringify(data));
+  }
+
   // Utility functions
   getQuestionTypes(): string[] {
     return ['multiple-choice', 'true-false', 'written', 'matching', 'ordering', 'drag-drop'];
@@ -338,6 +379,7 @@ export class QuestionBankService {
   resetAllData(): void {
     this.questionBanks.clear();
     this.templates = [];
+    localStorage.removeItem('full_coverage_quizzes');
     this.saveQuestionBanks();
     this.saveTemplates();
   }
