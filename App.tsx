@@ -1,11 +1,14 @@
 import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
-import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem } from './types';
+import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem, QuizQuestion } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
-import AnalysisDashboard from './components/AnalysisDashboard';
+const PracticeCenter = lazy(() => import('./components/PracticeCenter'));
+const StudyModule = lazy(() => import('./components/StudyModule'));
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
 import { FocusManager } from './components/shared/FocusManager';
 
-const DocumentUploader = lazy(() => import('./components/DocumentUploader'));
+const LearningHub = lazy(() => import('./components/LearningHub'));
+const ContentUploader = lazy(() => import('./components/ContentUploader'));
+import { ProcessResult } from './components/ContentUploader';
 import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
@@ -13,86 +16,73 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PerformanceMonitor from './components/PerformanceMonitor';
 import CVInterviewManager from './components/CVInterviewManager';
 import { useLanguage } from './contexts/LanguageContext';
-import { loadSettings, saveSettings, getAISettings } from './utils/settingsUtils';
+import { loadSettings, saveSettings } from './utils/settingsUtils';
 
 const HISTORY_KEY = 'documentAnalysisHistory';
 
-type AppMode = 'analysis' | 'cv-interview';
+type ViewState = 'upload' | 'loading' | 'error' | 'analysis_result' | 'cv_interview' | 'practice_center';
 
 const App: React.FC = () => {
-  const [currentMode, setCurrentMode] = useState<AppMode>('analysis');
+  const [viewState, setViewState] = useState<ViewState>('upload');
   const [documentText, setDocumentText] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [loadedInterview, setLoadedInterview] = useState<CVInterview | null>(null);
-  const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([
-    { label: 'Extracting document text...', status: 'waiting' },
-    { label: 'Analyzing content with AI...', status: 'waiting' },
-    { label: 'Generating summary...', status: 'waiting' },
-    { label: 'Extracting topics...', status: 'waiting' },
-    { label: 'Analyzing entities and sentiment...', status: 'waiting' },
-    { label: 'Saving results...', status: 'waiting' },
-  ]);
+  const [activeInterview, setActiveInterview] = useState<CVInterview | null>(null);
+  const [questionBank, setQuestionBank] = useState<QuizQuestion[]>([]);
+  const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
   const { t, locale, setLocale } = useLanguage();
 
   useEffect(() => {
     try {
       const savedHistory = localStorage.getItem(HISTORY_KEY);
-      if (savedHistory) {
-        setHistory(JSON.parse(savedHistory));
-      }
+      if (savedHistory) setHistory(JSON.parse(savedHistory));
+
+      const savedBank = localStorage.getItem('questionBank');
+      if (savedBank) setQuestionBank(JSON.parse(savedBank));
     } catch (err) {
-      console.error("Failed to load history from localStorage", err);
+      console.error("Failed to load data from localStorage", err);
     }
   }, []);
 
-  const handleDocumentProcess = useCallback(async (source: File | string) => {
-    setAnalysisSteps([
-      { label: 'Extracting document text...', status: 'waiting' },
-      { label: 'Analyzing content with AI...', status: 'waiting' },
-      { label: 'Generating summary...', status: 'waiting' },
-      { label: 'Extracting topics...', status: 'waiting' },
-      { label: 'Analyzing entities and sentiment...', status: 'waiting' },
-      { label: 'Saving results...', status: 'waiting' },
-    ]);
+  const handleProcess = useCallback(async (result: ProcessResult) => {
+    if (result.contentType === 'document') {
+      await handleDocumentAnalysis(result.source);
+    } else if (result.contentType === 'cv') {
+      handleCvInterview(result);
+    }
+  }, [settings]);
 
-    setIsLoading(true);
+  const handleDocumentAnalysis = async (source: File | string) => {
+    setViewState('loading');
     setError(null);
     setAnalysisResult(null);
     setDocumentText(null);
-    const currentFileName = source instanceof File ? source.name : source;
+    const currentFileName = source instanceof File ? source.name : 'Pasted Text';
     setFileName(currentFileName);
 
-    try {
-      setAnalysisSteps(prev => prev.map((step, idx) =>
-        idx === 0 ? { ...step, status: 'in-progress' as const } : step
-      ));
+    const steps: AnalysisStep[] = [
+      { label: 'Extracting document text...', status: 'in-progress' },
+      { label: 'Analyzing content with AI...', status: 'waiting' },
+      { label: 'Generating summary...', status: 'waiting' },
+      { label: 'Extracting topics...', status: 'waiting' },
+      { label: 'Saving results...', status: 'waiting' },
+    ];
+    setAnalysisSteps(steps);
 
+    try {
       const text = await extractTextFromSource(source);
       setDocumentText(text);
-
-      setAnalysisSteps(prev => prev.map((step, idx) =>
-        idx === 0 ? { ...step, status: 'completed' as const } :
-        idx === 1 ? { ...step, status: 'in-progress' as const } : step
-      ));
+      setAnalysisSteps(prev => prev.map((s, i) => i === 0 ? { ...s, status: 'completed' } : i === 1 ? { ...s, status: 'in-progress' } : s));
 
       const { aiService } = await import('./services/aiService');
       const result = await aiService.analyzeDocument(text, settings);
       setAnalysisResult(result);
-
-      setAnalysisSteps(prev => prev.map((step, idx) => ({
-        ...step,
-        status: idx >= 1 && idx <= 4 ? 'completed' as const : step.status
-      })));
-
-      setAnalysisSteps(prev => prev.map((step, idx) =>
-        idx === 5 ? { ...step, status: 'in-progress' as const } : step
-      ));
+      setAnalysisSteps(prev => prev.map((s, i) => i > 0 && i < 4 ? { ...s, status: 'completed' } : s));
+      setAnalysisSteps(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'in-progress' } : s));
 
       const newHistoryItem: DocumentHistoryItem = {
         type: 'document',
@@ -101,46 +91,80 @@ const App: React.FC = () => {
         documentText: text,
         date: new Date().toISOString(),
       };
-
-      setHistory(prevHistory => {
-        const updatedHistory = [newHistoryItem, ...prevHistory.filter(item => item.type === 'document' && item.fileName !== currentFileName)];
-        try {
-          localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
-        } catch (err) {
-          console.error("Failed to save history to localStorage", err);
-        }
-        return updatedHistory;
-      });
-
-      setAnalysisSteps(prev => prev.map((step, idx) =>
-        idx === 5 ? { ...step, status: 'completed' as const } : step
-      ));
+      updateHistory(newHistoryItem);
+      setAnalysisSteps(prev => prev.map(s => ({ ...s, status: 'completed' })));
+      setViewState('analysis_result');
 
     } catch (err) {
       console.error("Processing failed:", err);
-      setAnalysisSteps(prev => prev.map(step => ({ ...step, status: 'error' as const })));
-      if (err instanceof Error && err.message.startsWith('error.')) {
-        setError(err.message);
-      } else {
-        setError('error.unknown');
-      }
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : 'error.unknown');
+      setViewState('error');
     }
-  }, [settings.apis, settings.ui]);
+  };
+
+  const handleCvInterview = async (result: ProcessResult) => {
+    setViewState('loading');
+    try {
+        const cvText = await extractTextFromSource(result.source);
+                const newInterview: CVInterview = {
+                    id: `cv-${Date.now()}`,
+                    cvContent: cvText,
+                    targetPosition: result.targetPosition!,
+                    interviewType: result.interviewType!,
+                    customPrompt: result.customPrompt,
+                    questions: [],
+                    answers: [],
+                    feedback: { 
+                        overallScore: 0,
+                        positionFit: 'fair',
+                        strengths: [],
+                        weaknesses: [],
+                        recommendations: [],
+                        summary: ''
+                    },
+                    createdAt: new Date().toISOString(),
+                    status: 'preparing'
+                };
+                setActiveInterview(newInterview);
+                setViewState('cv_interview');
+    } catch (err) {
+        console.error("CV processing failed:", err);
+        setError(err instanceof Error ? err.message : 'error.unknown');
+        setViewState('error');
+    }
+  };
   
-  const handleLoadHistory = useCallback(async (item: HistoryItem) => {
+  const updateHistory = (newItem: HistoryItem) => {
+    setHistory(prevHistory => {
+      const updatedHistory = [newItem, ...prevHistory.filter(item => {
+        if (newItem.type === 'document' && item.type === 'document') {
+          return item.fileName !== newItem.fileName;
+        }
+        if (newItem.type === 'interview' && item.type === 'interview') {
+          return item.interview.id !== newItem.interview.id;
+        }
+        return true;
+      })];
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+      } catch (err) {
+        console.error("Failed to save history to localStorage", err);
+      }
+      return updatedHistory;
+    });
+  };
+
+  const handleLoadHistory = useCallback((item: HistoryItem) => {
+    setError(null);
     if (item.type === 'document') {
-        setCurrentMode('analysis');
         setAnalysisResult(item.analysis);
         setDocumentText(item.documentText);
         setFileName(item.fileName);
-        setError(null);
-        setIsLoading(false);
-        setLoadedInterview(null);
+        setActiveInterview(null);
+        setViewState('analysis_result');
     } else if (item.type === 'interview') {
-        setLoadedInterview(item.interview);
-        setCurrentMode('cv-interview');
+        setActiveInterview(item.interview);
+        setViewState('cv_interview');
     }
   }, []);
 
@@ -150,21 +174,32 @@ const App: React.FC = () => {
         interview: interview,
         date: new Date().toISOString(),
     };
+    updateHistory(newHistoryItem);
+  };
 
-    setHistory(prevHistory => {
-        const filteredHistory = prevHistory.filter(item => {
-            if (item.type === 'interview') {
-                return item.interview.id !== interview.id;
-            }
-            return true;
-        });
-        const updatedHistory = [newHistoryItem, ...filteredHistory];
-        try {
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
-        } catch (err) {
-            console.error("Failed to save history to localStorage", err);
-        }
-        return updatedHistory;
+  const handleDeleteQuestion = (questionText: string) => {
+    setQuestionBank(prevBank => {
+      const updatedBank = prevBank.filter(q => q.question !== questionText);
+      try {
+        localStorage.setItem('questionBank', JSON.stringify(updatedBank));
+      } catch (err) {
+        console.error("Failed to save question bank to localStorage", err);
+      }
+      return updatedBank;
+    });
+  };
+
+  const handleEditQuestion = (oldText: string, newText: string) => {
+    setQuestionBank(prevBank => {
+      const updatedBank = prevBank.map(q => q.question === oldText ? { ...q, question: newText } : q);
+      try {
+        localStorage.setItem('questionBank', JSON.stringify(updatedBank));
+        const { spacedRepetitionService } = require('./services/spacedRepetitionService');
+        spacedRepetitionService.updateQuestionText(oldText, newText);
+      } catch (err) {
+        console.error("Failed to save updated question bank to localStorage", err);
+      }
+      return updatedBank;
     });
   };
 
@@ -178,13 +213,12 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
+    setViewState('upload');
     setDocumentText(null);
     setAnalysisResult(null);
-    setIsLoading(false);
     setError(null);
     setFileName(null);
-    setLoadedInterview(null);
-    setCurrentMode('analysis');
+    setActiveInterview(null);
   };
 
   const handleSaveSettings = useCallback(async (newSettings: UserSettings) => {
@@ -208,7 +242,7 @@ const App: React.FC = () => {
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
-    );
+  );
 
   const LanguageSwitcher: React.FC = () => (
     <div className="relative">
@@ -231,34 +265,12 @@ const App: React.FC = () => {
     <header className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3">
-              <svg className="w-8 h-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
-            </div>
+          <div className="flex items-center space-x-4">
+            <button onClick={() => setViewState('upload')} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${viewState === 'upload' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>Hub</button>
+            <button onClick={() => setViewState('practice_center')} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${viewState === 'practice_center' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>Practice Center</button>
 
-            <nav className="hidden sm:flex space-x-1">
-              <button
-                onClick={() => { setCurrentMode('analysis'); setLoadedInterview(null); }}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  currentMode === 'analysis'
-                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                }`}
-              >
-                Document Analysis
-              </button>
-              <button
-                onClick={() => setCurrentMode('cv-interview')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  currentMode === 'cv-interview'
-                    ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-                }`}
-              >
-                CV Interview
-              </button>
-            </nav>
+            <svg className="w-8 h-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('header.title')}</h1>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -267,18 +279,15 @@ const App: React.FC = () => {
               className="p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               title={t('header.settingsTooltip')}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </button>
             <LanguageSwitcher />
-            {analysisResult && currentMode === 'analysis' && (
+            {viewState !== 'upload' && (
               <button
                 onClick={handleReset}
                 className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-900 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
               >
-                {t('header.analyzeAnother')}
+                {t('header.startOver')}
               </button>
             )}
           </div>
@@ -287,65 +296,88 @@ const App: React.FC = () => {
     </header>
   );
 
-  return (
-    <ErrorBoundary
-      onError={(error, errorInfo) => {
-        console.error('App Error:', error, errorInfo);
-      }}
-    >
-        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
-        {/* Focus Manager giúp duy trì focus khi navigate */}
-        <FocusManager />
+  const renderContent = () => {
+    switch (viewState) {
+      case 'loading':
+        return (
+          <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
+            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
+              <Loader size="lg" />
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
+              <ProgressIndicator steps={analysisSteps} currentStep={0} />
+            </div>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
+            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
+              <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error || 'error.unknown')}</p>
+              <button
+                onClick={handleReset}
+                className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+              >
+                {t('error.tryAgain')}
+              </button>
+            </div>
+          </div>
+        );
+      case 'analysis_result':
+        if (analysisResult && documentText) {
+          return (
+            <Suspense fallback={<div className='h-screen w-full bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse' />}>
+              <StudyModule
+                analysis={analysisResult}
+                documentText={documentText}
+                fileName={fileName || 'Uploaded Document'}
+                settings={settings}
+              />
+            </Suspense>
+          );
+        }
+        handleReset(); // Should not happen, reset if it does
+        return null;
+      case 'cv_interview':
+        return (
+          <CVInterviewManager
+            settings={settings}
+            initialInterview={activeInterview}
+            onInterviewComplete={handleInterviewComplete}
+          />
+        );
+      case 'practice_center':
+        return (
+          <Suspense fallback={<UploadSkeleton />}>
+            <PracticeCenter questionBank={questionBank} onDeleteQuestion={handleDeleteQuestion} onEditQuestion={handleEditQuestion} />
+          </Suspense>
+        );
+      case 'upload':
+      default:
+        return (
+          <Suspense fallback={<UploadSkeleton />}>
+            <LearningHub 
+              history={history} 
+              onProcess={handleProcess} 
+              onLoadHistory={handleLoadHistory} 
+              onImportHistory={handleImportHistory} 
+            />
+          </Suspense>
+        );
+    }
+  };
 
+  return (
+    <ErrorBoundary onError={(e, i) => console.error('App Error:', e, i)}>
+      <div className="min-h-screen bg-zinc-100 dark:bg-zinc-900 font-sans">
+        <FocusManager />
         <Header />
         <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-          {currentMode === 'cv-interview' ? (
-            <CVInterviewManager settings={settings} initialInterview={loadedInterview} onInterviewComplete={handleInterviewComplete} />
-          ) : (
-            <>
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)]">
-                  <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 max-w-2xl w-full">
-                    <Loader size="lg" />
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-4 text-center">{t('loader.analyzing')}</h3>
-                    <ProgressIndicator steps={analysisSteps} currentStep={0} />
-                  </div>
-                </div>
-              ) : error ? (
-                 <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] text-center">
-                   <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-xl border border-red-500/30 text-center max-w-md w-full">
-                      <div className="mx-auto w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                          <ErrorIcon className="w-7 h-7 text-red-600 dark:text-red-400" />
-                      </div>
-                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('error.title')}</h3>
-                      <p className="mt-2 text-zinc-600 dark:text-zinc-400">{t(error)}</p>
-                       <button
-                          onClick={handleReset}
-                          className="mt-6 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 transition-all shadow-sm hover:shadow-md"
-                      >
-                          {t('error.tryAgain')}
-                      </button>
-                  </div>
-                </div>
-              ) : analysisResult && documentText ? (
-                <AnalysisDashboard
-                  analysis={analysisResult}
-                  documentText={documentText}
-                  fileName={fileName || 'Uploaded Document'}
-                  settings={settings}
-                />
-              ) : (
-                <>
-                  <Suspense fallback={<UploadSkeleton />}>
-                    <DocumentUploader onProcess={handleDocumentProcess} />
-                  </Suspense>
-                  <HistoryList items={history} onLoadItem={handleLoadHistory} onImportHistory={handleImportHistory} />
-                </>
-              )}
-            </>
-          )}
+          {renderContent()}
         </main>
-
         <SettingsModal
           isOpen={isSettingsModalOpen}
           onClose={() => setIsSettingsModalOpen(false)}
@@ -353,7 +385,6 @@ const App: React.FC = () => {
           onSaveSettings={handleSaveSettings}
           t={t}
         />
-
         {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
       </div>
     </ErrorBoundary>

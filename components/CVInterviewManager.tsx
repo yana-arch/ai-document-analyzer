@@ -7,7 +7,7 @@ import InterviewResults from './InterviewResults';
 import { useLanguage } from '../contexts/LanguageContext';
 import UploadSkeleton from './skeletons/UploadSkeleton';
 
-const CVUploader = lazy(() => import('./CVUploader'));
+
 
 type InterviewStep = 'upload' | 'preparation' | 'session' | 'results';
 
@@ -98,14 +98,7 @@ const CVInterviewManager: React.FC<CVInterviewManagerProps> = ({ settings, initi
     switch (currentStep) {
       case 'upload':
         return (
-          <Suspense fallback={<UploadSkeleton />}>
-            <CVUploader
-              onCVProcess={handleCVProcess}
-              onTargetPositionChange={setTargetPosition}
-              onInterviewTypeChange={setInterviewType}
-              onCustomPromptChange={setCustomPrompt}
-            />
-          </Suspense>
+          <div>Please go back to the main screen to upload a CV.</div>
         );
 
       case 'preparation':

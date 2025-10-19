@@ -1,4 +1,4 @@
-import { SRSItem, StudySession, EnhancedQuizQuestion } from '../types';
+import { StudySession, EnhancedQuizQuestion, QuizQuestion, SRSItem } from '../types';
 
 export class SpacedRepetitionService {
   private static instance: SpacedRepetitionService;
@@ -71,6 +71,32 @@ export class SpacedRepetitionService {
       this.srsItems.set(id, srsItem);
     });
 
+    this.saveSRSItems();
+  }
+
+  // Add a single question to SRS
+  addQuestion(question: QuizQuestion): void {
+    // Avoid duplicates
+    for (const item of this.srsItems.values()) {
+      if (item.question === question.question) {
+        return; // Already exists
+      }
+    }
+
+    const id = `srs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const srsItem: SRSItem = {
+      id,
+      question: question.question,
+      answer: this.extractAnswerFromQuestion(question as EnhancedQuizQuestion),
+      difficulty: this.calculateQuestionDifficulty(question as EnhancedQuizQuestion),
+      nextReview: new Date().toISOString(),
+      lastReviewed: new Date().toISOString(),
+      reviewCount: 0,
+      easeFactor: 2.5,
+      interval: 1,
+      repetitions: 0
+    };
+    this.srsItems.set(id, srsItem);
     this.saveSRSItems();
   }
 
@@ -307,6 +333,24 @@ export class SpacedRepetitionService {
   // Public API
   getAllItems(): SRSItem[] {
     return Array.from(this.srsItems.values());
+  }
+
+  getItemByQuestion(questionText: string): SRSItem | undefined {
+    for (const item of this.srsItems.values()) {
+      if (item.question === questionText) {
+        return item;
+      }
+    }
+    return undefined;
+  }
+
+  updateQuestionText(oldText: string, newText: string): void {
+    const item = this.getItemByQuestion(oldText);
+    if (item) {
+      item.question = newText;
+      this.srsItems.set(item.id, item);
+      this.saveSRSItems();
+    }
   }
 
   getItemsByDifficulty(difficulty: number): SRSItem[] {

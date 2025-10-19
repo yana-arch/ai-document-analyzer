@@ -100,9 +100,7 @@ export function usePreloadComponent(importFunc: () => Promise<any>) {
 export function preloadCriticalComponents() {
   // Preload commonly used components
   const criticalComponents = [
-    () => import('../DocumentUploader'),
     () => import('../QnAChat'),
-    () => import('../AnalysisDashboard'),
   ];
 
   criticalComponents.forEach(preload => {

@@ -59,6 +59,10 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
         // Simple shuffle
         generatedQuestions.sort(() => Math.random() - 0.5);
         setQuestions(generatedQuestions);
+        // Add to SRS
+        const { spacedRepetitionService } = await import('../services/spacedRepetitionService');
+        generatedQuestions.forEach(q => spacedRepetitionService.addQuestion(q));
+
         setQuizState('taking');
         setCurrentQuestionIndex(-1);
         setSelectedMCAnswers({});
@@ -157,7 +161,22 @@ const QuizGenerator: React.FC<QuizGeneratorProps> = ({ documentText, settings, d
       questionResults
     };
 
-    // Record attempt for adaptive learning
+    // Record quiz attempt for adaptive learning
+    const { spacedRepetitionService } = await import('../services/spacedRepetitionService');
+    questions.forEach((q, index) => {
+      const srsItem = spacedRepetitionService.getItemByQuestion(q.question);
+      if (srsItem) {
+        let quality = 0;
+        if (q.type === 'multiple-choice') {
+          quality = selectedMCAnswers[index] === q.correctAnswerIndex ? 5 : 0;
+        } else if (q.type === 'written') {
+          const graded = gradedAnswers[index];
+          quality = graded ? Math.round((graded.score / graded.maxScore) * 5) : 0;
+        }
+        spacedRepetitionService.processAnswer(srsItem.id, quality);
+      }
+    });
+
     adaptiveLearningService.recordQuizAttempt(quizAttempt);
   };
   
