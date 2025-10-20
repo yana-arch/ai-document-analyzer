@@ -1,10 +1,10 @@
 import React, { Suspense, useMemo } from 'react';
 import { HistoryItem } from '../types';
 import UploadSkeleton from './skeletons/UploadSkeleton';
-import { ProcessResult } from './ContentUploader';
+import { ProcessResult } from './WizardContentUploader';
 import Card from './shared/Card';
 
-const ContentUploader = React.lazy(() => import('./ContentUploader'));
+const WizardContentUploader = React.lazy(() => import('./WizardContentUploader'));
 const HistoryList = React.lazy(() => import('./HistoryList'));
 
 interface LearningHubProps {
@@ -41,21 +41,21 @@ const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHis
   return (
     <div className="space-y-12">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Learning Hub</h1>
-        <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400">Welcome back! Start a new session or review your progress.</p>
+        <h1 className="text-3xl text-center font-bold text-zinc-900 dark:text-zinc-100">Learning Hub</h1>
+        <p className="mt-2 text-lg text-center text-zinc-600 dark:text-zinc-400">Welcome back! Start a new session or review your progress.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8 items-start">
         <div className="lg:col-span-2">
           <Suspense fallback={<UploadSkeleton />}>
-            <ContentUploader onProcess={onProcess} />
+            <WizardContentUploader onProcess={onProcess} />
           </Suspense>
         </div>
-        <div className="lg:col-span-1 space-y-6">
+        {/* <div className="lg:col-span-1 space-y-6">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Statistics</h2>
             <StatCard title="Documents Analyzed" value={stats.documentCount} icon={DocumentIcon} />
             <StatCard title="Interviews Practiced" value={stats.interviewCount} icon={InterviewIcon} />
-        </div>
+        </div> */}
       </div>
 
       <div>

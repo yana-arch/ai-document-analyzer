@@ -67,6 +67,7 @@ const translations = {
     },
     cv: {
       configTitle: "Interview Configuration",
+      configHelp: "Customize your interview experience",
       targetPosition: "Target Position",
       targetPositionPlaceholder: "e.g., Senior Software Engineer",
       interviewType: "Interview Type",
@@ -76,6 +77,7 @@ const translations = {
       typeComprehensive: "Comprehensive",
       customPrompt: "Custom Instructions (Optional)",
       customPromptPlaceholder: "Focus on specific skills...",
+      advancedOptions: "Advanced Options",
     },
     exercises: {
       title: "Skill Exercises",
@@ -186,6 +188,23 @@ const translations = {
       maxSizeExceeded: "File size exceeds 50MB limit",
       invalidFormat: "File format not supported. Supported: .pdf,.docx,.doc,.txt,.rtf,.odt,.epub,.html",
       trySample: "Try with sample document →",
+      chooseType: "Choose Content Type",
+      typeHelp: "Select what type of content you want to analyze",
+      documentDesc: "Analyze reports, articles, papers, and any text-based content",
+      cvDesc: "Practice interviews and get feedback for your job application",
+      provideContent: "Provide Content",
+      contentHelp: "Upload your file or paste your content below",
+      dragDrop: "Click to upload or drag and drop",
+      or: "OR",
+      step1Desc: "Step 1: Choose Content Type",
+      step2Desc: "Step 2: Provide Content",
+      step3Desc: "Step 3: Configure Interview",
+      previous: "Previous",
+      next: "Next",
+      startInterview: "Start Interview",
+      pasteCV: 'Paste content over there',
+      pasteDoc: 'Paste content over there',
+      supportedFormats:"Supported file types"
     },
     dashboard: { // Kept for backwards compatibility, but new keys are in studyModule
       analysisFor: "Analysis for:",
@@ -336,6 +355,19 @@ const translations = {
       enableDocumentTipsDesc: "Show factual insights and verified information related to analyzed documents",
       cancel: "Cancel",
       saveSettings: "Save Settings",
+      // Settings Change Warning
+      noAPIs: "No active AI providers configured",
+      noActiveAPI: "No active AI providers selected",
+      themeChanged: "Theme preference changed",
+      summary: "The following changes may impact your practice experience:",
+      noImpact: "No significant impact expected",
+      details: "What this means",
+      detailsText1: "Practice questions are generated using your current AI provider settings.",
+      detailsText2: "Changing providers may affect question quality and availability.",
+      detailsText3: "Your existing practice questions will be preserved.",
+      later: "Decide Later",
+      reset: "Reset & Continue",
+      dontShowAgain: "Don't show this again",
     },
     tips: {
       title: "AI-Generated Document Tips",
@@ -419,10 +451,11 @@ const translations = {
       tabOverview: "Tổng quan",
       tabQA: "Hỏi & Đáp",
       tabPractice: "Luyện tập",
-      tabFullText: "Toàn văn",
+      // Tab removed: Full Text integrated into Overview
     },
     cv: {
       configTitle: "Cấu hình Phỏng vấn",
+      configHelp: "Tùy chỉnh trải nghiệm phỏng vấn của bạn",
       targetPosition: "Vị trí Ứng tuyển",
       targetPositionPlaceholder: "VD: Kỹ sư Phần mềm Cấp cao",
       interviewType: "Loại Phỏng vấn",
@@ -432,6 +465,7 @@ const translations = {
       typeComprehensive: "Toàn diện",
       customPrompt: "Hướng dẫn Tùy chỉnh (Tùy chọn)",
       customPromptPlaceholder: "Tập trung vào các kỹ năng cụ thể...",
+      advancedOptions: "Tùy chọn Nâng cao",
     },
     loader: {
       analyzing: "Đang phân tích tài liệu... việc này có thể mất một chút thời gian.",
@@ -460,6 +494,23 @@ const translations = {
       maxSizeExceeded: "Kích thước tệp vượt quá giới hạn 50MB",
       invalidFormat: "Định dạng tệp không được hỗ trợ. Được hỗ trợ: .pdf,.docx,.doc,.txt,.rtf,.odt,.epub,.html",
       trySample: "Thử với tài liệu mẫu →",
+      chooseType: "Chọn Loại Nội dung",
+      typeHelp: "Chọn loại nội dung bạn muốn phân tích",
+      documentDesc: "Phân tích báo cáo, bài báo, luận văn và bất kỳ nội dung dựa trên văn bản nào",
+      cvDesc: "Luyện tập phỏng vấn và nhận phản hồi cho việc ứng tuyển của bạn",
+      provideContent: "Cung cấp Nội dung",
+      contentHelp: "Tải tệp của bạn hoặc dán nội dung bên dưới",
+      dragDrop: "Nhấp để tải lên hoặc kéo thả",
+      or: "HOẶC",
+      step1Desc: "Bước 1: Chọn Loại Nội dung",
+      step2Desc: "Bước 2: Cung cấp Nội dung",
+      step3Desc: "Bước 3: Cấu hình Phỏng vấn",
+      previous: "Trước",
+      next: "Tiếp theo",
+      startInterview: "Bắt đầu Phỏng vấn",
+      pasteCV: 'Dán nội dung CV ở đây',
+      pasteDoc: 'Dán nội dung tài liệu ở đây',
+      supportedFormats:"Các loại file hỗ trợ"
     },
     dashboard: {
       analysisFor: "Phân tích cho:",
@@ -593,6 +644,19 @@ const translations = {
       enableDocumentTipsDesc: "Hiển thị những hiểu biết chính xác và thông tin đã được xác thực liên quan đến tài liệu đã phân tích",
       cancel: "Hủy",
       saveSettings: "Lưu cài đặt",
+      // Settings Change Warning
+      noAPIs: "Không có nhà cung cấp AI hoạt động nào được cấu hình",
+      noActiveAPI: "Không có nhà cung cấp AI hoạt động nào được chọn",
+      themeChanged: "Tùy chọn chủ đề đã thay đổi",
+      summary: "Những thay đổi sau có thể ảnh hưởng đến trải nghiệm luyện tập của bạn:",
+      noImpact: "Không có tác động đáng kể nào được dự kiến",
+      details: "Điều này có nghĩa là gì",
+      detailsText1: "Các câu hỏi luyện tập được tạo bằng cài đặt nhà cung cấp AI hiện tại của bạn.",
+      detailsText2: "Việc thay đổi nhà cung cấp có thể ảnh hưởng đến chất lượng và tính sẵn có của câu hỏi.",
+      detailsText3: "Các câu hỏi luyện tập hiện tại của bạn sẽ được bảo toàn.",
+      later: "Quyết định Sau",
+      reset: "Đặt lại & Tiếp tục",
+      dontShowAgain: "Đừng hiện lại",
     },
     tips: {
       title: "Gợi ý Tài liệu từ AI",
@@ -610,6 +674,13 @@ const translations = {
     common: {
       readMore: "Đọc thêm",
       showLess: "Hiện ít",
+      // Keyboard shortcuts
+      shortcuts: "Phím tắt",
+      shortcutInfo: "Nhấn Ctrl/Cmd + phím để điều hướng nhanh",
+      overviewShortcut: "Tổng quan",
+      qaShortcut: "Hỏi & Đáp",
+      practiceShortcut: "Luyện tập",
+      searchShortcut: "Tìm kiếm",
     }
   }
 };

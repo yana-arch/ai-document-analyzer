@@ -52,25 +52,46 @@ const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
     card: 'text-zinc-900 dark:text-zinc-100 hover:text-zinc-700 dark:hover:text-zinc-300'
   };
 
+  // Enhanced animation with spring physics
+  const springAnimation = {
+    initial: { opacity: 0, height: 0 },
+    animate: { opacity: 1, height: 'auto' },
+    exit: { opacity: 0, height: 0 }
+  };
+
   return (
     <div className={`transition-all ease-in-out ${className}`}>
       <button
         onClick={handleToggle}
         className={`
-          w-full flex items-center justify-between p-4 group
+          w-full flex items-center justify-between p-4 sm:p-6 group
           ${variant !== 'default' ? 'border border-b-0' : 'border-b'}
           ${variantClasses[variant]}
           ${triggerVariants[variant]}
           ${sizeClasses[size]}
           ${triggerClassName}
           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-inset
+          hover:bg-zinc-50 dark:hover:bg-zinc-800/30
+          active:bg-zinc-100 dark:active:bg-zinc-800/50
+          transition-all duration-200 ease-in-out
         `}
         aria-expanded={isExpanded}
         aria-controls={`content-${title}`}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {icon}
+          {icon && (
+            <div className={`flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+              isExpanded ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500 dark:text-zinc-400'
+            }`}>
+              {icon}
+            </div>
+          )}
           <span className="font-medium truncate">{title}</span>
+          {isExpanded && (
+            <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+              {typeof children === 'string' ? children.length : ' '} items
+            </span>
+          )}
         </div>
 
         {headerActions && (
@@ -78,8 +99,8 @@ const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
         )}
 
         <svg
-          className={`w-5 h-5 transform transition-transform duration-200 flex-shrink-0 ${
-            isExpanded ? 'rotate-180' : ''
+          className={`w-5 h-5 transform transition-transform duration-300 ease-out flex-shrink-0 ${
+            isExpanded ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : 'text-zinc-500 dark:text-zinc-400'
           }`}
           fill="none"
           stroke="currentColor"
@@ -92,14 +113,17 @@ const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
       <div
         id={`content-${title}`}
         className={`
-          overflow-hidden transition-all duration-300 ease-in-out
-          ${isExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}
+          overflow-hidden transition-all duration-500 ease-in-out
+          ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
           ${variant !== 'default' ? 'border-l border-r border-b rounded-b-2xl' : 'border-b'}
           ${variantClasses[variant]}
         `}
-        style={{ transitionProperty: 'max-height, opacity' }}
+        style={{ 
+          transitionProperty: 'max-height, opacity, padding',
+          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
       >
-        <div className={`p-4 ${contentClassName}`}>
+        <div className={`p-4 sm:p-6 ${contentClassName} ${isExpanded ? '' : 'hidden'}`}>
           {children}
         </div>
       </div>

@@ -2,9 +2,10 @@ import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem, QuizQuestion } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
 const PracticeCenter = lazy(() => import('./components/PracticeCenter'));
-const StudyModule = lazy(() => import('./components/StudyModule'));
+const OptimizedStudyModule = lazy(() => import('./components/OptimizedStudyModule'));
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
 import { FocusManager } from './components/shared/FocusManager';
+import { PracticeProvider, usePracticeSettingsHandler } from './components/PracticeStateManager';
 
 const LearningHub = lazy(() => import('./components/LearningHub'));
 const ContentUploader = lazy(() => import('./components/ContentUploader'));
@@ -22,7 +23,7 @@ const HISTORY_KEY = 'documentAnalysisHistory';
 
 type ViewState = 'upload' | 'loading' | 'error' | 'analysis_result' | 'cv_interview' | 'practice_center';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [viewState, setViewState] = useState<ViewState>('upload');
   const [documentText, setDocumentText] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -35,6 +36,9 @@ const App: React.FC = () => {
   const [questionBank, setQuestionBank] = useState<QuizQuestion[]>([]);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
   const { t, locale, setLocale } = useLanguage();
+  
+  // Handle settings changes for practice state
+  usePracticeSettingsHandler(settings);
 
   useEffect(() => {
     try {
@@ -330,7 +334,7 @@ const App: React.FC = () => {
         if (analysisResult && documentText) {
           return (
             <Suspense fallback={<div className='h-screen w-full bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse' />}>
-              <StudyModule
+              <OptimizedStudyModule
                 analysis={analysisResult}
                 documentText={documentText}
                 fileName={fileName || 'Uploaded Document'}
@@ -388,6 +392,14 @@ const App: React.FC = () => {
         {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
       </div>
     </ErrorBoundary>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <PracticeProvider>
+      <AppContent />
+    </PracticeProvider>
   );
 };
 
