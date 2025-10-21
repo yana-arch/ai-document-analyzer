@@ -1,6 +1,6 @@
 {
-  "name": "AI Document Analyzer V2.0",
-  "description": "A cutting-edge document analysis application powered by Google Gemini AI with a ChatGPT-inspired modern interface. Features progressive loading, interactive Q&A with inline editing, smart quiz generation, and professional-grade UX with enhanced accessibility.",
-  "version": "2.0.0",
+  "name": "AI Document Analyzer V2.4",
+  "description": "A cutting-edge document analysis application powered by Google Gemini AI with a ChatGPT-inspired modern interface. Features progressive loading, interactive Q&A with inline editing, smart quiz generation, CV interview practice, speech-to-text input, integrated history management, and professional-grade UX with enhanced accessibility and complete multilingual support.",
+  "version": "2.4.0",
   "requestFramePermissions": []
 }

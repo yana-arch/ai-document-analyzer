@@ -2,7 +2,7 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# 🤖 AI Document Analyzer V2.0
+# 🤖 AI Document Analyzer V2.4
 
 A cutting-edge document analysis application powered by Google Gemini AI with a ChatGPT-inspired modern interface. This app provides intelligent document analysis, interactive Q&A, smart quiz generation, and comprehensive insights with professional-grade performance, accessibility, and multi-format support.
 
