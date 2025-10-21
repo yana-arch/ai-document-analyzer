@@ -3,10 +3,24 @@ import { decryptApiKey } from '../utils/apiKeyUtils';
 import { GeminiProvider } from './providers/GeminiProvider';
 import { OpenRouterProvider } from './providers/OpenRouterProvider';
 import { BaseAIProvider } from './providers/BaseAIProvider';
+import { cacheService } from './cacheService';
 
 class AIService {
   private providers: Map<string, BaseAIProvider> = new Map();
   private cache: Map<string, any> = new Map();
+  
+  // Cache TTL settings for different operations (in seconds)
+  private readonly CACHE_TTL = {
+    documentAnalysis: 24 * 60 * 60, // 24 hours
+    quizGeneration: 12 * 60 * 60,   // 12 hours
+    exerciseGeneration: 12 * 60 * 60, // 12 hours
+    chatSession: 2 * 60 * 60,       // 2 hours
+    grading: 6 * 60 * 60,           // 6 hours
+    fullCoverage: 6 * 60 * 60       // 6 hours
+  };
+  
+  // Debounce map to prevent duplicate API calls
+  private pendingRequests = new Map<string, Promise<any>>();
 
   constructor() {
     // Initialize with empty providers - they'll be loaded from settings
@@ -67,23 +81,80 @@ class AIService {
       throw new Error('No active AI provider configured. Please configure an API in Settings.');
     }
 
-    const analysis = await provider.analyzeDocument(text, settings.ai);
-
-    // Generate document tips using the analysis if enabled
-    let tips: DocumentTip[] = [];
-    if (settings.ui.enableDocumentTips) {
-      try {
-        tips = await provider.generateDocumentTips(text, analysis, settings.ui.enableDefaultGemini ? 'en' : 'en', settings.ai);
-      } catch (error) {
-        console.warn('Failed to generate document tips:', error);
-        // Continue without tips if generation fails
+    // Generate cache key based on document content and settings
+    const cacheKey = cacheService.generateKey(
+      text, 
+      'document_analysis', 
+      { 
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength,
+        maxTopics: settings.ai?.maxTopicsCount 
       }
+    );
+
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for document analysis: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
     }
 
-    return {
-      ...analysis,
-      tips
-    };
+    // Check if there's a pending request for the same document
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Waiting for pending document analysis...');
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const request = provider.analyzeDocument(text, settings.ai)
+      .then((analysis) => {
+        // Generate document tips using the analysis if enabled
+        let tips: DocumentTip[] = [];
+        if (settings.ui.enableDocumentTips) {
+          return provider.generateDocumentTips(text, analysis, settings.ui.enableDefaultGemini ? 'en' : 'en', settings.ai)
+            .then((generatedTips) => {
+              const result: AnalysisResult = {
+                ...analysis,
+                tips: generatedTips
+              };
+              
+              // Cache the complete result
+              cacheService.set(cacheKey, result, this.CACHE_TTL.documentAnalysis);
+              this.pendingRequests.delete(cacheKey);
+              return result;
+            })
+            .catch((error) => {
+              console.warn('Failed to generate document tips:', error);
+              // Continue without tips if generation fails
+              const result: AnalysisResult = {
+                ...analysis,
+                tips: []
+              };
+              
+              cacheService.set(cacheKey, result, this.CACHE_TTL.documentAnalysis);
+              this.pendingRequests.delete(cacheKey);
+              return result;
+            });
+        } else {
+          const result: AnalysisResult = {
+            ...analysis,
+            tips: []
+          };
+          
+          cacheService.set(cacheKey, result, this.CACHE_TTL.documentAnalysis);
+          this.pendingRequests.delete(cacheKey);
+          return result;
+        }
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(cacheKey);
+        throw error;
+      });
+
+    // Store the pending request
+    this.pendingRequests.set(cacheKey, request);
+    
+    return request;
   }
 
   async createChat(documentText: string, locale: 'en' | 'vi', settings: UserSettings, conversationContext?: string): Promise<any> {
@@ -92,7 +163,31 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.createChat(documentText, locale, conversationContext);
+    // Generate cache key (conversation context affects uniqueness)
+    const cacheKey = cacheService.generateKey(
+      documentText + (conversationContext || ''), 
+      'chat_session', 
+      { 
+        locale,
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength
+      }
+    );
+
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for chat session: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
+    }
+
+    // For chat sessions, we don't use pending requests as they're typically sequential
+    const result = provider.createChat(documentText, locale, conversationContext);
+    
+    // Cache chat results with shorter TTL
+    cacheService.set(cacheKey, result, this.CACHE_TTL.chatSession);
+    
+    return result;
   }
 
   async generateQuiz(text: string, locale: 'en' | 'vi', settings: UserSettings, mcCount: number, writtenCount: number, mode: 'default' | 'full-coverage' = 'default'): Promise<QuizQuestion[]> {
@@ -101,7 +196,50 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.generateQuiz(text, locale, mcCount, writtenCount);
+    // Generate cache key
+    const cacheKey = cacheService.generateKey(
+      text, 
+      'quiz_generation', 
+      { 
+        locale, 
+        mcCount, 
+        writtenCount, 
+        mode,
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength
+      }
+    );
+
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for quiz generation: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
+    }
+
+    // Check for pending request
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Waiting for pending quiz generation...');
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const request = provider.generateQuiz(text, locale, mcCount, writtenCount)
+      .then((questions) => {
+        // Cache the result
+        cacheService.set(cacheKey, questions, this.CACHE_TTL.quizGeneration);
+        this.pendingRequests.delete(cacheKey);
+        return questions;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(cacheKey);
+        throw error;
+      });
+
+    // Store pending request
+    this.pendingRequests.set(cacheKey, request);
+    
+    return request;
   }
 
   async generateFullCoverageQuestions(text: string, locale: 'en' | 'vi', settings: UserSettings): Promise<{ questions: string[]; hasMore: boolean; nextBatchToken?: string }> {
@@ -110,7 +248,47 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.generateFullCoverageQuestions(text, locale);
+    // Generate cache key
+    const cacheKey = cacheService.generateKey(
+      text, 
+      'full_coverage_questions', 
+      { 
+        locale,
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength
+      }
+    );
+
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for full coverage questions: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
+    }
+
+    // Check for pending request
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Waiting for pending full coverage generation...');
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const request = provider.generateFullCoverageQuestions(text, locale)
+      .then((result) => {
+        // Cache results
+        cacheService.set(cacheKey, result, this.CACHE_TTL.fullCoverage);
+        this.pendingRequests.delete(cacheKey);
+        return result;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(cacheKey);
+        throw error;
+      });
+
+    // Store pending request
+    this.pendingRequests.set(cacheKey, request);
+    
+    return request;
   }
 
   async gradeWrittenAnswer(documentText: string, question: string, userAnswer: string, locale: 'en' | 'vi', settings: UserSettings): Promise<GradedWrittenAnswer> {
@@ -119,7 +297,47 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    return provider.gradeWrittenAnswer(documentText, question, userAnswer, locale);
+    // Generate cache key
+    const cacheKey = cacheService.generateKey(
+      documentText + question + userAnswer, 
+      'written_answer_grading', 
+      { 
+        locale,
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength
+      }
+    );
+
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for written answer grading: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
+    }
+
+    // Check for pending request
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Waiting for pending grading...');
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const request = provider.gradeWrittenAnswer(documentText, question, userAnswer, locale)
+      .then((result) => {
+        // Cache grading results
+        cacheService.set(cacheKey, result, this.CACHE_TTL.grading);
+        this.pendingRequests.delete(cacheKey);
+        return result;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(cacheKey);
+        throw error;
+      });
+
+    // Store pending request
+    this.pendingRequests.set(cacheKey, request);
+    
+    return request;
   }
 
   async gradeExercise(documentText: string, exercise: Exercise, submission: any, locale: 'en' | 'vi', settings: UserSettings): Promise<any> {
@@ -143,50 +361,58 @@ class AIService {
       throw new Error('No active AI provider configured.');
     }
 
-    const rawExercises = await provider.generateExercises(text, locale, exerciseCounts);
-
-    // Post-process exercises to handle AI putting fillable elements in examples instead of fillableElements
-    rawExercises.forEach((exercise: any) => {
-      if (exercise.type === 'fillable' && (!exercise.fillableElements || exercise.fillableElements.length === 0)) {
-        // Look for table examples in fillable exercises without fillableElements
-        const tableExamples = exercise.examples?.filter((ex: any) => ex.type === 'table') || [];
-        if (tableExamples.length > 0) {
-          // Convert table examples to fillable elements
-          const fillableElements = tableExamples.map((ex: any) => {
-            try {
-              // Parse markdown table content to extract rows
-              const lines = ex.content.split('\n')
-                .map((line: string) => line.trim())
-                .filter((line: string) => line && !line.startsWith('---') && !line.startsWith('| ---'));
-
-              const rows: string[][] = lines
-                .map((line: string) => line.split('|').slice(1, -1).map((cell: string) => cell.trim()))
-                .filter((row: string[]) => row.length > 0);
-
-              if (rows.length > 0) {
-                return {
-                  id: `from-example-${Math.random().toString(36).substr(2, 9)}`,
-                  type: 'table',
-                  data: { rows }
-                };
-              }
-            } catch (error) {
-              console.warn('Failed to parse table from example:', error);
-            }
-            return null;
-          }).filter((element: any) => element);
-
-          if (fillableElements.length > 0) {
-            exercise.fillableElements = fillableElements;
-            // Remove the table examples since they're now in fillableElements
-            exercise.examples = exercise.examples.filter((ex: any) => ex.type !== 'table');
-            console.log(`Extracted ${fillableElements.length} fillable elements from examples for exercise: ${exercise.title}`);
-          }
-        }
+    // Generate cache key
+    const cacheKey = cacheService.generateKey(
+      text, 
+      'exercise_generation', 
+      { 
+        locale, 
+        exerciseCounts,
+        languageStyle: settings.ai?.languageStyle,
+        summaryLength: settings.ai?.summaryLength
       }
-    });
+    );
 
-    // Process exercises and ensure proper typing and fillable elements
+    // Check cache first
+    const cachedResult = cacheService.get(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for exercise generation: ${cacheKey.substring(0, 50)}...`);
+      return cachedResult;
+    }
+
+    // Check for pending request
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log('Waiting for pending exercise generation...');
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const request = provider.generateExercises(text, locale, exerciseCounts)
+      .then((rawExercises) => {
+        // Post-process exercises (existing logic)
+        const processedExercises = this.processExercises(rawExercises, text, locale, settings, provider);
+        
+        // Cache the processed result
+        cacheService.set(cacheKey, processedExercises, this.CACHE_TTL.exerciseGeneration);
+        this.pendingRequests.delete(cacheKey);
+        return processedExercises;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(cacheKey);
+        throw error;
+      });
+
+    // Store pending request
+    this.pendingRequests.set(cacheKey, request);
+    
+    return request;
+  }
+
+  /**
+   * Process exercises with proper typing and fillable elements
+   */
+  private async processExercises(rawExercises: any[], text: string, locale: 'en' | 'vi', settings: UserSettings, provider: BaseAIProvider): Promise<Exercise[]> {
+    // Post-process exercises and ensure proper typing and fillable elements
     const processedExercises = await Promise.all(rawExercises.map(async (exercise: any) => {
       // For fillable exercises, ensure they have fillableElements
       if (exercise.type === 'fillable') {
@@ -234,6 +460,38 @@ class AIService {
     return processedExercises;
   }
 
+  /**
+   * Get cache statistics for monitoring
+   */
+  public getCacheStats() {
+    return cacheService.getStats();
+  }
+
+  /**
+   * Clear specific operation cache or all cache
+   */
+  public clearCache(operation?: string) {
+    if (operation) {
+      // Clear cache for specific operation (would need to implement pattern-based clearing)
+      console.log(`Clearing cache for operation: ${operation}`);
+    } else {
+      // Clear all cache
+      cacheService.clear();
+      this.pendingRequests.clear();
+      console.log('All cache cleared');
+    }
+  }
+
+  /**
+   * Get the number of pending AI requests
+   */
+  public getPendingRequestCount(): number {
+    return this.pendingRequests.size;
+  }
+
+  /**
+   * Generate mock table data for fallback (existing logic)
+   */
   generateMockTableData(context: string, locale: 'en' | 'vi'): any {
     // Generate table based on exercise context keywords
     const lowerContext = context.toLowerCase();

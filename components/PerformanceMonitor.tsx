@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from './shared/Card';
 import { cacheService } from '../services/cacheService';
-import { apiUtils } from '../utils/apiUtils';
+import { aiService } from '../services/aiService';
 
 interface PerformanceMetrics {
   cacheStats: {
@@ -11,6 +11,13 @@ interface PerformanceMetrics {
     totalHits: number;
     totalMisses: number;
     evictions: number;
+    memoryUsed: number;
+  };
+  aiServiceStats: {
+    pendingRequests: number;
+    cacheHitRate: number;
+    totalRequests: number;
+    averageResponseTime: number;
   };
   memoryUsage: {
     used: number;
@@ -21,16 +28,28 @@ interface PerformanceMetrics {
     domContentLoaded: number;
     loadComplete: number;
     firstContentfulPaint?: number;
+    firstInputDelay?: number;
+    largestContentfulPaint?: number;
   };
   network: {
     pendingRequests: number;
     averageResponseTime: number;
+    resourcesLoaded: number;
   };
 }
 
 const PerformanceMonitor: React.FC = () => {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    cacheStats: cacheService.getStats(),
+    cacheStats: {
+      ...cacheService.getStats(),
+      memoryUsed: 0
+    },
+    aiServiceStats: {
+      pendingRequests: 0,
+      cacheHitRate: 0,
+      totalRequests: 0,
+      averageResponseTime: 0
+    },
     memoryUsage: { used: 0, total: 0, percentage: 0 },
     timing: {
       domContentLoaded: 0,
@@ -39,7 +58,8 @@ const PerformanceMonitor: React.FC = () => {
     },
     network: {
       pendingRequests: 0,
-      averageResponseTime: 0
+      averageResponseTime: 0,
+      resourcesLoaded: 0
     }
   });
 
@@ -63,7 +83,9 @@ const PerformanceMonitor: React.FC = () => {
     const timing = {
       domContentLoaded: navigation?.domContentLoadedEventEnd - navigation?.domContentLoadedEventStart || 0,
       loadComplete: navigation?.loadEventEnd - navigation?.loadEventStart || 0,
-      firstContentfulPaint: 0
+      firstContentfulPaint: 0,
+      firstInputDelay: 0,
+      largestContentfulPaint: 0
     };
 
     // First Contentful Paint (if available)
@@ -73,11 +95,52 @@ const PerformanceMonitor: React.FC = () => {
       timing.firstContentfulPaint = fcpEntry.startTime;
     }
 
+    // First Input Delay (if available)
+    const fidEntries = performance.getEntriesByType('measure') as PerformanceEntry[];
+    const fidEntry = fidEntries.find(entry => entry.name.includes('first-input-delay'));
+    if (fidEntry) {
+      timing.firstInputDelay = fidEntry.duration;
+    }
+
+    // Largest Contentful Paint (if available)
+    const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+    if (lcpEntries.length > 0) {
+      timing.largestContentfulPaint = lcpEntries[lcpEntries.length - 1].startTime;
+    }
+
+    // AI Service statistics
+    const aiStats = aiService.getCacheStats();
+    const aiServiceStats = {
+      pendingRequests: aiService.getPendingRequestCount(),
+      cacheHitRate: aiStats.hitRate,
+      totalRequests: aiStats.totalHits + aiStats.totalMisses,
+      averageResponseTime: 0 // Could be implemented with request timing
+    };
+
+    // Network resources
+    const resourcesLoaded = performance.getEntriesByType('resource').length;
+    const networkRequests = performance.getEntriesByType('resource').filter(
+      entry => entry.duration > 0
+    ) as PerformanceResourceTiming[];
+
+    const averageResponseTime = networkRequests.length > 0
+      ? networkRequests.reduce((sum, req) => sum + req.duration, 0) / networkRequests.length
+      : 0;
+
     setMetrics(prev => ({
       ...prev,
-      cacheStats,
+      cacheStats: {
+        ...cacheStats,
+        memoryUsed: memoryUsage.used
+      },
+      aiServiceStats,
       memoryUsage,
-      timing
+      timing,
+      network: {
+        pendingRequests: aiServiceStats.pendingRequests,
+        averageResponseTime,
+        resourcesLoaded
+      }
     }));
   }, []);
 
@@ -190,6 +253,41 @@ const PerformanceMonitor: React.FC = () => {
                 <span className="text-zinc-600 dark:text-zinc-400">Misses:</span>
                 <span className="ml-1 font-mono">{metrics.cacheStats.totalMisses}</span>
               </div>
+              <div>
+                <span className="text-zinc-600 dark:text-zinc-400">Memory:</span>
+                <span className="ml-1 font-mono">{formatBytes(metrics.cacheStats.memoryUsed)}</span>
+              </div>
+              <div>
+                <span className="text-zinc-600 dark:text-zinc-400">Evictions:</span>
+                <span className="ml-1 font-mono">{metrics.cacheStats.evictions}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Service Statistics */}
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg">
+            <h4 className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 mb-2">
+              AI Service Performance
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-indigo-600 dark:text-indigo-400">Pending Requests:</span>
+                <span className="ml-1 font-mono">{metrics.aiServiceStats.pendingRequests}</span>
+              </div>
+              <div>
+                <span className="text-indigo-600 dark:text-indigo-400">Cache Hit Rate:</span>
+                <span className="ml-1 font-mono text-green-600">
+                  {formatPercentage(metrics.aiServiceStats.cacheHitRate)}
+                </span>
+              </div>
+              <div>
+                <span className="text-indigo-600 dark:text-indigo-400">Total Requests:</span>
+                <span className="ml-1 font-mono">{metrics.aiServiceStats.totalRequests}</span>
+              </div>
+              <div>
+                <span className="text-indigo-600 dark:text-indigo-400">Avg Response:</span>
+                <span className="ml-1 font-mono">{formatTime(metrics.aiServiceStats.averageResponseTime)}</span>
+              </div>
             </div>
           </div>
 
@@ -221,6 +319,26 @@ const PerformanceMonitor: React.FC = () => {
           {/* Timing Information */}
           <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg">
             <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+              Core Web Vitals
+            </h4>
+            <div className="grid grid-cols-1 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-zinc-600 dark:text-zinc-400">Largest Contentful Paint:</span>
+                <span className="font-mono">{metrics.timing.largestContentfulPaint ? formatTime(metrics.timing.largestContentfulPaint) : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-600 dark:text-zinc-400">First Input Delay:</span>
+                <span className="font-mono">{metrics.timing.firstInputDelay ? formatTime(metrics.timing.firstInputDelay) : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-600 dark:text-zinc-400">First Contentful Paint:</span>
+                <span className="font-mono">{metrics.timing.firstContentfulPaint ? formatTime(metrics.timing.firstContentfulPaint) : 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded-lg">
+            <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
               Page Load Times
             </h4>
             <div className="grid grid-cols-1 gap-2 text-xs">
@@ -232,12 +350,6 @@ const PerformanceMonitor: React.FC = () => {
                 <span className="text-zinc-600 dark:text-zinc-400">Load Complete:</span>
                 <span className="font-mono">{formatTime(metrics.timing.loadComplete)}</span>
               </div>
-              {metrics.timing.firstContentfulPaint && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-600 dark:text-zinc-400">First Contentful Paint:</span>
-                  <span className="font-mono">{formatTime(metrics.timing.firstContentfulPaint)}</span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -250,10 +362,13 @@ const PerformanceMonitor: React.FC = () => {
               Refresh
             </button>
             <button
-              onClick={() => cacheService.clear()}
+              onClick={() => {
+                cacheService.clear();
+                aiService.clearCache();
+              }}
               className="flex-1 px-3 py-2 text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
             >
-              Clear Cache
+              Clear All Cache
             </button>
           </div>
         </div>

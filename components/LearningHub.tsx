@@ -3,6 +3,7 @@ import { HistoryItem } from '../types';
 import UploadSkeleton from './skeletons/UploadSkeleton';
 import { ProcessResult } from './WizardContentUploader';
 import Card from './shared/Card';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const WizardContentUploader = React.lazy(() => import('./WizardContentUploader'));
 const HistoryList = React.lazy(() => import('./HistoryList'));
@@ -29,6 +30,8 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 );
 
 const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHistory, onImportHistory }) => {
+  const { locale, t } = useLanguage();
+
   const stats = useMemo(() => {
     const documentCount = history.filter(item => item.type === 'document').length;
     const interviewCount = history.filter(item => item.type === 'interview').length;
@@ -41,8 +44,8 @@ const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHis
   return (
     <div className="space-y-12">
       <div>
-        <h1 className="text-3xl text-center font-bold text-zinc-900 dark:text-zinc-100">Learning Hub</h1>
-        <p className="mt-2 text-lg text-center text-zinc-600 dark:text-zinc-400">Welcome back! Start a new session or review your progress.</p>
+        <h1 className="text-3xl text-center font-bold text-zinc-900 dark:text-zinc-100">{t('hub.title')}</h1>
+        <p className="mt-2 text-lg text-center text-zinc-600 dark:text-zinc-400">{t('hub.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-8 items-start">
@@ -52,14 +55,14 @@ const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHis
           </Suspense>
         </div>
         {/* <div className="lg:col-span-1 space-y-6">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Statistics</h2>
-            <StatCard title="Documents Analyzed" value={stats.documentCount} icon={DocumentIcon} />
-            <StatCard title="Interviews Practiced" value={stats.interviewCount} icon={InterviewIcon} />
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{t('hub.statsTitle')}</h2>
+            <StatCard title={t('hub.docsAnalyzed')} value={stats.documentCount} icon={DocumentIcon} />
+            <StatCard title={t('hub.interviewsPracticed')} value={stats.interviewCount} icon={InterviewIcon} />
         </div> */}
       </div>
 
       <div>
-        {/* <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">History</h2> */}
+        {/* <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">{t('hub.historyTitle')}</h2> */}
         <Suspense fallback={<div className='h-64 w-full bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse' />}>
           <HistoryList items={history} onLoadItem={onLoadHistory} onImportHistory={onImportHistory} />
         </Suspense>

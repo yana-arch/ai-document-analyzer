@@ -1,8 +1,9 @@
-import React, { useRef, useCallback, useState, useMemo } from 'react';
+import React, { useRef, useCallback, useState, useMemo, memo } from 'react';
 import { HistoryItem, DocumentHistoryItem, InterviewHistoryItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { exportHistory, importHistory, mergeHistory } from '../utils/historyUtils';
 import ProgressiveDisclosure from './shared/ProgressiveDisclosure';
+import { VirtualScroll } from './shared/VirtualScroll';
 
 interface HistoryListProps {
   items: HistoryItem[];
@@ -21,12 +22,12 @@ const UserIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 );
 
-const EnhancedHistoryItem: React.FC<{
+const EnhancedHistoryItem = memo<{
   item: HistoryItem,
   onLoadItem: (item: HistoryItem) => void,
   t: (key: string) => string,
   viewMode: 'list' | 'grid'
-}> = ({ item, onLoadItem, t, viewMode }) => {
+}, (prevProps: any, nextProps: any) => boolean>(({ item, onLoadItem, t, viewMode }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -203,10 +204,11 @@ const EnhancedHistoryItem: React.FC<{
   }
 
   return null;
-};
+});
 
+const getItemHeight = (viewMode: 'list' | 'grid') => viewMode === 'list' ? 180 : 280; // Approximate heights for list and grid items
 
-const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHistory }) => {
+const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImportHistory }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -439,20 +441,46 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
 
       {/* Items Grid/List */}
       {filteredAndSortedItems.length > 0 ? (
-        <div className={
-          viewMode === 'grid'
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            : "space-y-4"
-        }>
-          {filteredAndSortedItems.map((item, index) => (
-            <EnhancedHistoryItem
-              key={item.type === 'document' ? `${item.fileName}_${item.date}` : item.interview.id}
-              item={item}
-              onLoadItem={onLoadItem}
-              t={t}
-              viewMode={viewMode}
-            />
-          ))}
+        <div className="relative">
+          {viewMode === 'grid' ? (
+            // Grid view - using CSS grid with virtual scrolling
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{ height: '800px' }}>
+              <VirtualScroll
+                items={filteredAndSortedItems}
+                itemHeight={getItemHeight('grid')}
+                containerHeight={800}
+                renderItem={(item: HistoryItem, index: number) => (
+                  <EnhancedHistoryItem
+                    key={item.type === 'document' ? `${(item as DocumentHistoryItem).fileName}_${item.date}` : (item as InterviewHistoryItem).interview.id}
+                    item={item}
+                    onLoadItem={onLoadItem}
+                    t={t}
+                    viewMode={viewMode}
+                  />
+                )}
+                className="pr-2" // Add padding for scrollbar
+              />
+            </div>
+          ) : (
+            // List view - using virtual scrolling
+            <div style={{ height: '600px' }}>
+              <VirtualScroll
+                items={filteredAndSortedItems}
+                itemHeight={getItemHeight('list')}
+                containerHeight={600}
+                renderItem={(item: HistoryItem, index: number) => (
+                  <EnhancedHistoryItem
+                    key={item.type === 'document' ? `${(item as DocumentHistoryItem).fileName}_${item.date}` : (item as InterviewHistoryItem).interview.id}
+                    item={item}
+                    onLoadItem={onLoadItem}
+                    t={t}
+                    viewMode={viewMode}
+                  />
+                )}
+                className="pr-2" // Add padding for scrollbar
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50 p-12 text-center">
@@ -469,6 +497,6 @@ const HistoryList: React.FC<HistoryListProps> = ({ items, onLoadItem, onImportHi
       )}
     </div>
   );
-};
+});
 
 export default HistoryList;

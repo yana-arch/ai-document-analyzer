@@ -117,17 +117,39 @@ export const PracticeProvider: React.FC<PracticeProviderProps> = ({
     try {
       const savedQuestions = localStorage.getItem('practiceQuestions');
       const lastSettings = localStorage.getItem('lastPracticeSettings');
-      
+
       if (savedQuestions) {
-        const parsedQuestions = JSON.parse(savedQuestions);
+        // Validate JSON before parsing
+        let parsedQuestions;
+        try {
+          parsedQuestions = JSON.parse(savedQuestions);
+        } catch (parseError) {
+          console.warn('Invalid practice questions data in localStorage, clearing corrupted data');
+          localStorage.removeItem('practiceQuestions');
+          return;
+        }
+
+        // Validate that parsed data is an array
+        if (!Array.isArray(parsedQuestions)) {
+          console.warn('Practice questions data is not an array, clearing corrupted data');
+          localStorage.removeItem('practiceQuestions');
+          return;
+        }
+
         dispatch({ type: 'RESET_QUESTIONS' });
         parsedQuestions.forEach((q: QuizQuestion) => {
           dispatch({ type: 'ADD_QUESTION', payload: q });
         });
       }
-      
+
       if (lastSettings) {
-        dispatch({ type: 'SETTINGS_CHANGED', payload: JSON.parse(lastSettings) });
+        try {
+          const parsedSettings = JSON.parse(lastSettings);
+          dispatch({ type: 'SETTINGS_CHANGED', payload: parsedSettings });
+        } catch (parseError) {
+          console.warn('Invalid practice settings data in localStorage, clearing corrupted data');
+          localStorage.removeItem('lastPracticeSettings');
+        }
       }
     } catch (error) {
       console.error('Failed to load practice questions:', error);
@@ -202,20 +224,38 @@ export const withPracticeState = <P extends object>(
 // Hook to handle settings changes
 export const usePracticeSettingsHandler = (settings: UserSettings) => {
   const { dispatch, resetPractice } = usePractice();
-  
+
+  // Create a stable settings reference that only changes when critical settings change
+  const settingsKey = React.useMemo(() => {
+    return JSON.stringify({
+      activeAPI: settings.apis.find(api => api.isActive)?.id || '',
+      enableDefaultGemini: settings.ui?.enableDefaultGemini || false,
+      languageStyle: settings.ai?.languageStyle || 'balanced',
+    });
+  }, [settings.apis, settings.ui?.enableDefaultGemini, settings.ai?.languageStyle]);
+
+  // Track previous settings to avoid unnecessary updates
+  const prevSettingsRef = React.useRef<string>('');
+
   useEffect(() => {
+    // Only proceed if settings have actually changed
+    if (settingsKey === prevSettingsRef.current) {
+      return;
+    }
+
+    prevSettingsRef.current = settingsKey;
+
     // When settings change, mark practice as dirty
     dispatch({ type: 'SETTINGS_CHANGED', payload: settings });
-    
-    // You can add more sophisticated logic here to determine
-    // if the settings change requires a reset
-    const requiresReset = settings.apis.length === 0 || 
+
+    // Determine if the settings change requires a reset
+    const requiresReset = settings.apis.length === 0 ||
                          !settings.apis.some(api => api.isActive);
-    
+
     if (requiresReset) {
       resetPractice('Settings changed significantly');
     }
-  }, [settings, dispatch, resetPractice]);
-  
+  }, [settingsKey, dispatch, resetPractice]);
+
   return { resetPractice };
 };

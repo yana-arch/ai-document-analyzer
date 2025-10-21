@@ -21,10 +21,10 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
         <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-8 text-center">
           <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
           <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-            Generating Interview Results...
+            {t('interview.generatingResults')}
           </h3>
           <p className="text-zinc-600 dark:text-zinc-400">
-            Please wait while we analyze your performance and generate detailed feedback.
+            {t('interview.generatingResultsDesc')}
           </p>
         </div>
       </div>
@@ -81,10 +81,10 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
           <TrophyIcon className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-          Interview Complete!
+          {t('interview.completeTitle')}
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Here's your detailed performance analysis for the {interview.targetPosition} position
+          {t('interview.completeSubtitle').replace('{targetPosition}', interview.targetPosition)}
         </p>
       </div>
 
@@ -96,7 +96,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
             <div className={`text-5xl font-bold mb-2 ${getScoreColor(interview.feedback.overallScore)}`}>
               {interview.feedback.overallScore}%
             </div>
-            <div className="text-zinc-600 dark:text-zinc-400">Overall Score</div>
+            <div className="text-zinc-600 dark:text-zinc-400">{t('interview.overallScore')}</div>
           </div>
 
           {/* Position Fit */}
@@ -105,7 +105,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
               <TargetIcon className="w-4 h-4 mr-2" />
               {interview.feedback.positionFit.charAt(0).toUpperCase() + interview.feedback.positionFit.slice(1)} Fit
             </div>
-            <div className="text-zinc-600 dark:text-zinc-400">Position Match</div>
+            <div className="text-zinc-600 dark:text-zinc-400">{t('interview.positionMatch')}</div>
           </div>
 
           {/* Questions Completed */}
@@ -113,14 +113,14 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
             <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
               {interview.answers.length}/{interview.questions.length}
             </div>
-            <div className="text-zinc-600 dark:text-zinc-400">Questions Answered</div>
+            <div className="text-zinc-600 dark:text-zinc-400">{t('interview.questionsAnswered')}</div>
           </div>
         </div>
       </div>
 
       {/* Summary */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-8 mb-8">
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Summary</h3>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">{t('interview.summary')}</h3>
         <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
           {interview.feedback.summary}
         </p>
@@ -133,7 +133,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
             <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mr-3">
               <TrendingUpIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Strengths</h3>
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('interview.strengths')}</h3>
           </div>
 
           <ul className="space-y-3">
@@ -156,7 +156,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Areas for Improvement</h3>
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{t('interview.areasForImprovement')}</h3>
           </div>
 
           <ul className="space-y-3">
@@ -174,7 +174,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
 
       {/* Recommendations */}
       <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-8 mb-8">
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">Recommendations</h3>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">{t('interview.recommendations')}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {interview.feedback.recommendations.map((recommendation, index) => (
@@ -189,7 +189,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
       {/* Detailed Analysis */}
       {interview.feedback.detailedAnalysis && (
         <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-8 mb-8">
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">Detailed Analysis</h3>
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">{t('interview.detailedAnalysis')}</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Object.entries(interview.feedback.detailedAnalysis).map(([skill, score]) => (
@@ -220,7 +220,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
       {/* Question-by-Question Breakdown */}
       <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700 p-8 mb-8">
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
-          Question-by-Question Breakdown
+          {t('interview.questionBreakdown')}
         </h3>
 
         <div className="space-y-4">
@@ -253,7 +253,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
 
                 <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-lg p-4 mb-3">
                   <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                    <strong>Your Answer:</strong> {answer.answer.length > 200
+                    <strong>{t('interview.yourAnswer')}</strong> {answer.answer.length > 200
                       ? `${answer.answer.substring(0, 200)}...`
                       : answer.answer}
                   </p>
@@ -262,7 +262,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {answer.strengths && answer.strengths.length > 0 && (
                     <div>
-                      <h5 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Strengths</h5>
+                      <h5 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">{t('interview.strengths')}</h5>
                       <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
                         {answer.strengths.map((strength, i) => (
                           <li key={i}>• {strength}</li>
@@ -273,7 +273,7 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
 
                   {answer.improvements && answer.improvements.length > 0 && (
                     <div>
-                      <h5 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Improvements</h5>
+                      <h5 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">{t('interview.improvements')}</h5>
                       <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
                         {answer.improvements.map((improvement, i) => (
                           <li key={i}>• {improvement}</li>
@@ -294,22 +294,23 @@ const InterviewResults: React.FC<InterviewResultsProps> = ({
           onClick={onNewInterview}
           className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all"
         >
-          Practice Another Interview
+          {t('interview.practiceAnother')}
         </button>
 
         <button
           onClick={onViewHistory}
           className="px-6 py-3 bg-zinc-600 text-white rounded-lg hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 transition-all"
         >
-          View Interview History
+          {t('interview.viewHistory')}
         </button>
       </div>
 
       {/* Interview Info */}
       <div className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
         <p>
-          Completed on {new Date(interview.completedAt || interview.createdAt).toLocaleDateString()} •
-          {interview.interviewType.charAt(0).toUpperCase() + interview.interviewType.slice(1)} Interview
+          {t('interview.completedInfo')
+            .replace('{date}', new Date(interview.completedAt || interview.createdAt).toLocaleDateString())
+            .replace('{interviewType}', interview.interviewType.charAt(0).toUpperCase() + interview.interviewType.slice(1))}
         </p>
       </div>
     </div>
