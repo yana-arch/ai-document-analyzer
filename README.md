@@ -219,6 +219,66 @@ docker-compose up
 - **Production Environment**: Ensure `API_KEY` environment variable is set securely
 - **Backend Integration**: Consider adding a backend server for enhanced file processing and security
 
+### 📱 Mobile Deployment (Android APK)
+
+To package this web application as a native Android APK using Capacitor:
+
+**Prerequisites:**
+
+- Node.js 16+ (already required for the project)
+- Android Studio installed and configured (including JDK and Android SDK). Ensure `ANDROID_HOME` or `ANDROID_SDK_ROOT` environment variables are set correctly.
+
+**Steps:**
+
+1.  **Install Capacitor Core and CLI:**
+
+    ```bash
+    npm install @capacitor/core @capacitor/cli
+    ```
+
+2.  **Initialize Capacitor Project:**
+
+    ```bash
+    npx cap init "AI Document Analyzer" "com.geminicli.aidocumentanalyzer" --web-dir "dist"
+    ```
+
+    - Replace `"AI Document Analyzer"` with your desired app name.
+    - Replace `"com.geminicli.aidocumentanalyzer"` with a unique package ID (e.g., `com.yourcompany.yourapp`).
+
+3.  **Install Android Platform Package:**
+
+    ```bash
+    npm install @capacitor/android
+    ```
+
+4.  **Add Android Platform to Capacitor:**
+
+    ```bash
+    npx cap add android
+    ```
+
+5.  **Build Web Application:**
+
+    ```bash
+    npm run build
+    ```
+
+    This command compiles your React application into static web assets in the `dist` folder.
+
+6.  **Sync Web Assets with Android Project:**
+
+    ```bash
+    npx cap sync android
+    ```
+
+    This copies the built web assets from `dist` into the native Android project.
+
+7.  **Open Project in Android Studio & Build APK:**
+    - Open Android Studio.
+    - Select "Open an existing Android Studio project" and navigate to the `android` folder within your project root (e.g., `your-project-path/android`).
+    - Once the project loads and Gradle syncs, go to **"Build"** -> **"Build Bundle(s) / APK(s)"** -> **"Build APK(s)"**.
+    - The generated APK will typically be found in `android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ### Environment Variables
 
 ```bash
