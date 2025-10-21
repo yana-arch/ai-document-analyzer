@@ -1,15 +1,30 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { copyFileSync } from 'fs';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+
+    // Custom plugin to copy mobile optimizations CSS
+    const copyMobileCSS = {
+      name: 'copy-mobile-css',
+      generateBundle() {
+        // Copy mobile-optimizations.css to public folder if it exists
+        try {
+          copyFileSync('./mobile-optimizations.css', './public/mobile-optimizations.css');
+        } catch (error) {
+          console.warn('Could not copy mobile-optimizations.css:', error);
+        }
+      }
+    };
+
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react()],
+      plugins: [react(), copyMobileCSS],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

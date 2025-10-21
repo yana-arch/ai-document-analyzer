@@ -30,16 +30,16 @@ const Card: React.FC<CardProps> = ({
   };
 
   const sizeClasses = {
-    sm: 'min-h-[200px]',
-    md: 'min-h-[300px]',
-    lg: 'min-h-[400px]'
+    sm: 'min-h-[160px] sm:min-h-[200px]',
+    md: 'min-h-[240px] sm:min-h-[300px]',
+    lg: 'min-h-[320px] sm:min-h-[400px]'
   };
 
   const paddingClasses = {
     none: '',
-    sm: 'p-3 sm:p-4',
-    md: 'p-4 sm:p-6',
-    lg: 'p-6 sm:p-8'
+    sm: 'p-2 sm:p-3 lg:p-4',
+    md: 'p-3 sm:p-4 lg:p-6',
+    lg: 'p-4 sm:p-6 lg:p-8'
   };
 
   const cardClasses = `
@@ -53,14 +53,14 @@ const Card: React.FC<CardProps> = ({
   return (
     <div className={cardClasses}>
       {(title || actions) && (
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-3 sm:mb-4">
           {title && (
-            <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+            <h3 className="text-base sm:text-lg lg:text-xl font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
               {title}
             </h3>
           )}
           {actions && (
-            <div className="flex items-center space-x-2 ml-4">
+            <div className="flex items-center space-x-1 sm:space-x-2 sm:ml-4 self-start sm:self-center">
               {actions}
             </div>
           )}

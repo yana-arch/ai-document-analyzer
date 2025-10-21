@@ -29,15 +29,16 @@ const MobileOptimizedContainer: React.FC<MobileOptimizedContainerProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const paddingClasses = noPadding ? '' : 'p-4 sm:p-6';
+  const paddingClasses = noPadding ? '' : 'p-2 sm:p-4 lg:p-6';
 
   return (
     <div className={`
-      ${safeAreaTop ? 'pt-16 md:pt-0' : ''}
-      ${safeAreaBottom ? 'pb-20 md:pb-0' : ''}
+      ${safeAreaTop ? 'pt-12 sm:pt-16 md:pt-0' : ''}
+      ${safeAreaBottom ? 'pb-16 sm:pb-20 md:pb-0' : ''}
       ${paddingClasses}
       ${className}
       ${isMobile ? 'max-w-full' : 'max-w-4xl mx-auto'}
+      ${isMobile ? 'overscroll-contain' : ''}
     `}>
       {children}
     </div>

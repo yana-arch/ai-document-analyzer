@@ -299,11 +299,11 @@ const QnAChat: React.FC<QnAChatProps> = ({ documentText, fileName, settings, ana
       actions={
         <button
             onClick={handleClearChat}
-            className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500"
+            className="p-1.5 sm:p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 focus:ring-indigo-500 touch-manipulation"
             aria-label={t('chat.restart')}
             title={t('chat.restart')}
         >
-            <RefreshIcon className="w-5 h-5" />
+            <RefreshIcon className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       }
       header={

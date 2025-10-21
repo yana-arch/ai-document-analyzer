@@ -1,0 +1,178 @@
+/* Mobile Optimizations CSS */
+
+/* Touch-friendly button sizing */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Ensure buttons are large enough for touch */
+  button {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  /* Improve tap targets for small interactive elements */
+  .mobile-touch-target {
+    position: relative;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Better spacing for mobile */
+  .mobile-spacing {
+    margin: 8px 0;
+  }
+
+  /* Prevent horizontal scroll */
+  .mobile-container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Improve text readability on mobile */
+  .mobile-text {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Better form inputs for mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px;
+    min-height: 44px;
+  }
+
+  /* Smooth scrolling for better mobile experience */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  .mobile-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Better modal sizing for mobile */
+  .mobile-modal {
+    margin: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  /* Improve card spacing on mobile */
+  .mobile-card {
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+
+  /* Better list item spacing */
+  .mobile-list-item {
+    padding: 12px 0;
+    min-height: 60px;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-container {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .tablet-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+/* Safe area insets for devices with notches */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .safe-area-left {
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .safe-area-right {
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* Dark mode optimizations for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  .mobile-dark-optimized {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .high-contrast {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Focus improvements for accessibility */
+@media (max-width: 768px) {
+  .mobile-focus:focus {
+    outline: 3px solid #4f46e5;
+    outline-offset: 2px;
+  }
+}
+
+/* Better link handling on mobile */
+@media (max-width: 768px) {
+  a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+}
+
+/* Improved loading states for mobile */
+@media (max-width: 768px) {
+  .mobile-skeleton {
+    height: 120px;
+    border-radius: 8px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+/* Better error states for mobile */
+@media (max-width: 768px) {
+  .mobile-error {
+    padding: 16px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+}

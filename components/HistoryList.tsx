@@ -58,30 +58,30 @@ const EnhancedHistoryItem = memo<{
   };
 
   if (item.type === 'document') {
-    const previewText = item.analysis?.summary?.substring(0, 150) + '...' || '';
-    const topics = item.analysis?.topics?.slice(0, 3) || [];
+    const previewText = item.analysis?.summary?.substring(0, 120) + '...' || '';
+    const topics = item.analysis?.topics?.slice(0, 2) || [];
     const sentiment = item.analysis?.sentiment;
 
     return (
       <div className={`
-        bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50
-        hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 cursor-pointer
-        ${viewMode === 'grid' ? 'p-6' : 'p-4'}
+        bg-white dark:bg-zinc-800/50 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700/50
+        hover:shadow-xl hover:scale-[1.01] transition-all duration-200 cursor-pointer mobile-card
+        ${viewMode === 'grid' ? 'p-4 sm:p-6' : 'p-3 sm:p-4'}
       `}>
         <button
           onClick={() => onLoadItem(item)}
-          className="w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 rounded-lg"
+          className="w-full text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 rounded-lg mobile-focus"
         >
           {/* Header */}
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-2 sm:mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <ClockIcon className="w-4 h-4 text-zinc-400 shrink-0" />
+                <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-400 shrink-0" />
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   {formatDate(item.date)}
                 </span>
               </div>
-              <h3 className="font-semibold text-indigo-600 dark:text-indigo-400 truncate text-sm" title={item.fileName}>
+              <h3 className="font-semibold text-indigo-600 dark:text-indigo-400 truncate text-sm sm:text-base leading-tight" title={item.fileName}>
                 {item.fileName}
               </h3>
             </div>
@@ -92,13 +92,13 @@ const EnhancedHistoryItem = memo<{
 
           {/* Preview */}
           {previewText && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-2 sm:mb-3 line-clamp-2 leading-relaxed">
               {previewText}
             </p>
           )}
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
             {sentiment && (
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${getSentimentColor(sentiment)}`}>
                 {sentiment}
@@ -122,31 +122,31 @@ const EnhancedHistoryItem = memo<{
   }
 
   if (item.type === 'interview') {
-    const previewText = item.interview.cvContent?.substring(0, 150) + '...' || '';
+    const previewText = item.interview.cvContent?.substring(0, 120) + '...' || '';
     const score = item.interview.overallScore;
     const questionCount = item.interview.questions?.length || 0;
     const answerCount = item.interview.answers?.length || 0;
 
     return (
       <div className={`
-        bg-white dark:bg-zinc-800/50 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-700/50
-        hover:shadow-2xl hover:scale-[1.02] transition-all duration-200 cursor-pointer
-        ${viewMode === 'grid' ? 'p-6' : 'p-4'}
+        bg-white dark:bg-zinc-800/50 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700/50
+        hover:shadow-xl hover:scale-[1.01] transition-all duration-200 cursor-pointer mobile-card
+        ${viewMode === 'grid' ? 'p-4 sm:p-6' : 'p-3 sm:p-4'}
       `}>
         <button
           onClick={() => onLoadItem(item)}
-          className="w-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 rounded-lg"
+          className="w-full text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-800 rounded-lg mobile-focus"
         >
           {/* Header */}
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-2 sm:mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <UserIcon className="w-4 h-4 text-zinc-400 shrink-0" />
+                <UserIcon className="w-3 h-3 sm:w-4 sm:h-4 text-zinc-400 shrink-0" />
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   {formatDate(item.date)}
                 </span>
               </div>
-              <h3 className="font-semibold text-purple-600 dark:text-purple-400 truncate text-sm" title={item.interview.targetPosition}>
+              <h3 className="font-semibold text-purple-600 dark:text-purple-400 truncate text-sm sm:text-base leading-tight" title={item.interview.targetPosition}>
                 {t('history.interviewFor') || 'Interview for'} {item.interview.targetPosition}
               </h3>
             </div>
@@ -157,13 +157,13 @@ const EnhancedHistoryItem = memo<{
 
           {/* Preview */}
           {previewText && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-2 sm:mb-3 line-clamp-2 leading-relaxed">
               {previewText}
             </p>
           )}
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 sm:mb-3">
             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
               item.interview.interviewType === 'technical' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
               item.interview.interviewType === 'behavioral' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
@@ -297,8 +297,8 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
   }
 
   return (
-    <div className="max-w-6xl mx-auto mt-16">
-      <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-6 text-center">{t('history.title')}</h3>
+    <div className="max-w-6xl mx-auto mt-6 sm:mt-8 lg:mt-16 mobile-container">
+      <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-zinc-800 dark:text-zinc-200 mb-3 sm:mb-4 lg:mb-6 text-center px-2">{t('history.title')}</h3>
 
       {/* Progressive Controls Section - Simplified để giảm cognitive load */}
       <ProgressiveDisclosure
@@ -315,10 +315,10 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
         className="mb-6"
       >
         {/* Search and Filter Row */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
@@ -327,17 +327,17 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
               placeholder={t('history.searchPlaceholder') || "Search history..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+              className="w-full pl-10 pr-4 py-2 sm:py-3 bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 mobile-text"
             />
           </div>
 
           {/* Filter */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
             {(['all', 'document', 'interview'] as FilterType[]).map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors touch-target ${
                   filterType === type
                     ? 'bg-indigo-600 text-white'
                     : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600'
@@ -350,13 +350,13 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
         </div>
 
         {/* Sort and View Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
             {(['date', 'name', 'type'] as SortType[]).map((sort) => (
               <button
                 key={sort}
                 onClick={() => setSortBy(sort)}
-                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                className={`px-2 sm:px-3 py-1 sm:py-2 rounded-md text-xs sm:text-sm transition-colors touch-target ${
                   sortBy === sort
                     ? 'bg-zinc-200 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
@@ -370,56 +370,60 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors touch-target ${
                 viewMode === 'list'
                   ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                   : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
               }`}
+              title="List view"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors touch-target ${
                 viewMode === 'grid'
                   ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                   : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
               }`}
+              title="Grid view"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a-2 2 0 01-2-2v-2z" />
               </svg>
             </button>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="flex justify-center gap-3 sm:gap-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 flex-wrap sm:flex-nowrap">
           <button
             onClick={handleExportHistory}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2 touch-target mobile-text"
             disabled={filteredAndSortedItems.length === 0}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="14" height="14" className="sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
               <polyline points="7,10 12,15 17,10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            {t('history.exportButton')}
+            <span className="hidden sm:inline">{t('history.exportButton')}</span>
+            <span className="sm:hidden">Export</span>
           </button>
 
           <button
             onClick={handleImportTrigger}
-            className="px-4 py-2 bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200 rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 transition-colors flex items-center gap-2 touch-target mobile-text"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="14" height="14" className="sm:w-4 sm:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
               <polyline points="17,8 12,3 7,8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            {t('history.importButton')}
+            <span className="hidden sm:inline">{t('history.importButton')}</span>
+            <span className="sm:hidden">Import</span>
           </button>
 
           <input
