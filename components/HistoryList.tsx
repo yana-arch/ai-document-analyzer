@@ -1,9 +1,10 @@
-import React, { useRef, useCallback, useState, useMemo, memo } from 'react';
+import React, { useRef, useCallback, useState, useMemo, memo, useEffect } from 'react';
 import { HistoryItem, DocumentHistoryItem, InterviewHistoryItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { exportHistory, importHistory, mergeHistory } from '../utils/historyUtils';
 import ProgressiveDisclosure from './shared/ProgressiveDisclosure';
 import { VirtualScroll } from './shared/VirtualScroll';
+import { getDocuments, getInterviews, downloadDocument, downloadInterview } from '../services/databaseService';
 
 interface HistoryListProps {
   items: HistoryItem[];
@@ -20,6 +21,10 @@ const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const UserIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+);
+
+const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 );
 
 const EnhancedHistoryItem = memo<{
@@ -215,6 +220,32 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('date');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [dbDocuments, setDbDocuments] = useState<any[]>([]);
+  const [dbInterviews, setDbInterviews] = useState<any[]>([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+
+  useEffect(() => {
+    const fetchDbItems = async () => {
+      setLoadingDb(true);
+      try {
+        const [docs, ints] = await Promise.all([getDocuments(), getInterviews()]);
+        setDbDocuments(docs);
+        setDbInterviews(ints);
+      } catch (error) {
+        console.error('Failed to fetch DB items:', error);
+        // Show user notification for database connection error
+        if (typeof window !== 'undefined') {
+          alert('Unable to load items from database. Please check your connection.');
+        }
+        // Set empty arrays to prevent further errors
+        setDbDocuments([]);
+        setDbInterviews([]);
+      } finally {
+        setLoadingDb(false);
+      }
+    };
+    fetchDbItems();
+  }, []);
 
   // Filter and sort items
   const filteredAndSortedItems = useMemo(() => {
@@ -497,6 +528,84 @@ const HistoryList: React.FC<HistoryListProps> = memo(({ items, onLoadItem, onImp
           <p className="text-zinc-600 dark:text-zinc-400">
             {t('history.noResultsDesc') || 'Try adjusting your search or filter criteria'}
           </p>
+        </div>
+      )}
+
+      {/* Database Items Section */}
+      {(dbDocuments.length > 0 || dbInterviews.length > 0) && (
+        <div className="mt-12">
+          <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4 text-center">
+            {t('history.databaseItems') || 'Saved in Database'}
+          </h4>
+          {loadingDb ? (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-zinc-600 dark:text-zinc-400">{t('history.loadingDb') || 'Loading...'}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {dbDocuments.map((doc) => (
+                <div key={doc.id} className="bg-white dark:bg-zinc-800/50 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700/50 p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ClockIcon className="w-3 h-3 text-zinc-400 shrink-0" />
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-indigo-600 dark:text-indigo-400 truncate text-sm leading-tight" title={doc.file_name}>
+                        {doc.file_name}
+                      </h3>
+                    </div>
+                    <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full shrink-0 ml-2">
+                      Document
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+                    {doc.document_text?.substring(0, 120) + '...'}
+                  </p>
+                  <button
+                    onClick={() => downloadDocument(doc)}
+                    className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors flex items-center gap-2 text-sm"
+                  >
+                    <DownloadIcon className="w-4 h-4" />
+                    {t('history.download') || 'Download'}
+                  </button>
+                </div>
+              ))}
+              {dbInterviews.map((interview) => (
+                <div key={interview.id} className="bg-white dark:bg-zinc-800/50 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700/50 p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <UserIcon className="w-3 h-3 text-zinc-400 shrink-0" />
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {new Date(interview.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-purple-600 dark:text-purple-400 truncate text-sm leading-tight" title={interview.target_position}>
+                        {interview.target_position}
+                      </h3>
+                    </div>
+                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full shrink-0 ml-2">
+                      Interview
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+                    {interview.cv_content?.substring(0, 120) + '...'}
+                  </p>
+                  <button
+                    onClick={() => downloadInterview(interview)}
+                    className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors flex items-center gap-2 text-sm"
+                  >
+                    <DownloadIcon className="w-4 h-4" />
+                    {t('history.download') || 'Download'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

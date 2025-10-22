@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem, QuizQuestion } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
+import { saveDocument, saveInterview } from './services/databaseService';
 const PracticeCenter = lazy(() => import('./components/PracticeCenter'));
 const OptimizedStudyModule = lazy(() => import('./components/OptimizedStudyModule'));
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
@@ -73,7 +74,8 @@ const AppContent: React.FC = () => {
       { label: 'Analyzing content with AI...', status: 'waiting' },
       { label: 'Generating summary...', status: 'waiting' },
       { label: 'Extracting topics...', status: 'waiting' },
-      { label: 'Saving results...', status: 'waiting' },
+      { label: 'Saving results to database...', status: 'waiting' },
+      { label: 'Saving to local history...', status: 'waiting' },
     ];
     setAnalysisSteps(steps);
 
@@ -87,6 +89,20 @@ const AppContent: React.FC = () => {
       setAnalysisResult(result);
       setAnalysisSteps(prev => prev.map((s, i) => i > 0 && i < 4 ? { ...s, status: 'completed' } : s));
       setAnalysisSteps(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'in-progress' } : s));
+
+      // Save to database
+      try {
+        await saveDocument(currentFileName, text, result);
+        setAnalysisSteps(prev => prev.map((s, i) => i === 4 ? { ...s, status: 'completed' } : s));
+        setAnalysisSteps(prev => prev.map((s, i) => i === 5 ? { ...s, status: 'in-progress' } : s));
+      } catch (dbError) {
+        console.error('Failed to save to database:', dbError);
+        // Show user notification for database error
+        if (typeof window !== 'undefined') {
+          alert('Analysis completed successfully, but failed to save to database. Results are saved locally.');
+        }
+        // Continue even if DB save fails
+      }
 
       const newHistoryItem: DocumentHistoryItem = {
         type: 'document',
@@ -113,6 +129,7 @@ const AppContent: React.FC = () => {
                 const newInterview: CVInterview = {
                     id: `cv-${Date.now()}`,
                     cvContent: cvText,
+                    cvFileName: result.source instanceof File ? result.source.name : undefined,
                     targetPosition: result.targetPosition!,
                     interviewType: result.interviewType!,
                     customPrompt: result.customPrompt,
@@ -129,6 +146,30 @@ const AppContent: React.FC = () => {
                     createdAt: new Date().toISOString(),
                     status: 'preparing'
                 };
+
+                // Save to database
+                try {
+                    await saveInterview({
+                        cvContent: cvText,
+                        cvFileName: newInterview.cvFileName,
+                        targetPosition: newInterview.targetPosition,
+                        interviewType: newInterview.interviewType,
+                        customPrompt: newInterview.customPrompt,
+                        questions: newInterview.questions,
+                        answers: newInterview.answers,
+                        overallScore: newInterview.feedback.overallScore,
+                        feedback: newInterview.feedback,
+                        completedAt: newInterview.completedAt,
+                        status: newInterview.status
+                    });
+                } catch (dbError) {
+                    console.error('Failed to save interview to database:', dbError);
+                    if (typeof window !== 'undefined') {
+                        alert('Interview setup completed, but failed to save to database. Data is saved locally.');
+                    }
+                    // Continue even if DB save fails
+                }
+
                 setActiveInterview(newInterview);
                 setViewState('cv_interview');
     } catch (err) {
@@ -172,7 +213,30 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  const handleInterviewComplete = (interview: CVInterview) => {
+  const handleInterviewComplete = async (interview: CVInterview) => {
+    // Save completed interview to database
+    try {
+        await saveInterview({
+            cvContent: interview.cvContent,
+            cvFileName: interview.cvFileName,
+            targetPosition: interview.targetPosition,
+            interviewType: interview.interviewType,
+            customPrompt: interview.customPrompt,
+            questions: interview.questions,
+            answers: interview.answers,
+            overallScore: interview.feedback.overallScore,
+            feedback: interview.feedback,
+            completedAt: interview.completedAt || new Date().toISOString(),
+            status: interview.status
+        });
+    } catch (dbError) {
+        console.error('Failed to save completed interview to database:', dbError);
+        if (typeof window !== 'undefined') {
+            alert('Interview completed, but failed to save to database. Results are saved locally.');
+        }
+        // Continue even if DB save fails
+    }
+
     const newHistoryItem: InterviewHistoryItem = {
         type: 'interview',
         interview: interview,
