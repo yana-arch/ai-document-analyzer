@@ -500,6 +500,7 @@ const AppContent: React.FC = () => {
           onClose={() => setIsSettingsModalOpen(false)}
           settings={settings}
           onSaveSettings={handleSaveSettings}
+          onSyncToDatabase={handleSyncToDatabase}
           t={t}
         />
         {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}

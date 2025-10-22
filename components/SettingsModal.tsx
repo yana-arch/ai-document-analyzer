@@ -8,6 +8,7 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: UserSettings;
   onSaveSettings: (settings: UserSettings) => void;
+  onSyncToDatabase?: () => void;
   t: (key: string) => string;
 }
 
@@ -16,6 +17,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   settings,
   onSaveSettings,
+  onSyncToDatabase,
   t,
 }) => {
   const [localSettings, setLocalSettings] = useState<UserSettings>(settings);
@@ -604,6 +606,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-indigo-600"></div>
                   </label>
                 </div>
+
+                {/* Sync to Database Button */}
+                {onSyncToDatabase && (
+                  <div className="pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                          Sync to Database
+                        </label>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          Sync all local history items to the database
+                        </p>
+                      </div>
+                      <button
+                        onClick={onSyncToDatabase}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors flex items-center gap-2"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                          <polyline points="7,10 12,15 17,10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Sync Now
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
