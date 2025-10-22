@@ -29,10 +29,11 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
-  // File/Text state
+  // File/Text/URL state
   const [source, setSource] = useState<File | string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [textValue, setTextValue] = useState<string>('');
+  const [urlValue, setUrlValue] = useState<string>('');
 
   // CV-specific state
   const [targetPosition, setTargetPosition] = useState('');
@@ -49,6 +50,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
     setSource(null);
     setFileName(null);
     setTextValue('');
+    setUrlValue('');
     setError(null);
     setIsProcessing(false);
   };
@@ -80,6 +82,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
     setSource(file);
     setFileName(file.name);
     setTextValue(''); // Clear text area if a file is chosen
+    setUrlValue(''); // Clear URL if a file is chosen
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -103,6 +106,15 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
     setTextValue(e.target.value);
     setSource(e.target.value);
     setFileName(null); // Clear file if text is entered
+    setUrlValue(''); // Clear URL if text is entered
+    if (e.target.value.trim()) setError(null);
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrlValue(e.target.value);
+    setSource(e.target.value);
+    setFileName(null); // Clear file if URL is entered
+    setTextValue(''); // Clear text if URL is entered
     if (e.target.value.trim()) setError(null);
   };
 
@@ -111,7 +123,7 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
     setError(null);
 
     if (!source) {
-      setError('Please upload a file or paste content.');
+      setError('Please upload a file, enter a URL, or paste content.');
       return;
     }
 
@@ -185,6 +197,26 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
           </p>
         </div>
       </label>
+    </div>
+  );
+
+  const renderUrlInput = () => (
+    <div>
+      <label htmlFor="content-url" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+        {t('uploader.urlInput') || 'Enter URL'}
+      </label>
+      <input
+        type="url"
+        id="content-url"
+        value={urlValue}
+        onChange={handleUrlChange}
+        placeholder={t('uploader.urlPlaceholder') || 'https://example.com/article'}
+        className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+        disabled={isProcessing}
+      />
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+        Supports web pages, articles, and online documents
+      </p>
     </div>
   );
 
@@ -314,6 +346,14 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({ onProcess }) => {
           </h3>
           
           {renderFileUploadArea()}
+
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-zinc-200 dark:border-zinc-700"></div>
+            <span className="mx-4 text-zinc-500 dark:text-zinc-400 font-medium text-sm">OR</span>
+            <div className="flex-grow border-t border-zinc-200 dark:border-zinc-700"></div>
+          </div>
+
+          {renderUrlInput()}
 
           <div className="flex items-center my-6">
             <div className="flex-grow border-t border-zinc-200 dark:border-zinc-700"></div>

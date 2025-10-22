@@ -30,10 +30,11 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
   // Step 1: Content Type Selection
   const [contentType, setContentType] = useState<ContentType>('document');
   
-  // Step 2: File/Text Input
+  // Step 2: File/Text/URL Input
   const [source, setSource] = useState<File | string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [textValue, setTextValue] = useState<string>('');
+  const [urlValue, setUrlValue] = useState<string>('');
   
   // Step 3: CV Configuration (only for CV type)
   const [targetPosition, setTargetPosition] = useState('');
@@ -51,6 +52,7 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
     setSource(null);
     setFileName(null);
     setTextValue('');
+    setUrlValue('');
     setTargetPosition('');
     setInterviewType('comprehensive');
     setCustomPrompt('');
@@ -83,6 +85,7 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
     setSource(file);
     setFileName(file.name);
     setTextValue(''); // Clear text area if a file is chosen
+    setUrlValue(''); // Clear URL if a file is chosen
     return null;
   }, []);
 
@@ -112,6 +115,14 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
     setTextValue(e.target.value);
     setSource(e.target.value);
     setFileName(null); // Clear file if text is entered
+    setUrlValue(''); // Clear URL if text is entered
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrlValue(e.target.value);
+    setSource(e.target.value);
+    setFileName(null); // Clear file if URL is entered
+    setTextValue(''); // Clear text if URL is entered
   };
 
   const handleSubmit = async () => {
@@ -278,6 +289,32 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
             </div>
           </label>
         </div>
+      </Card>
+
+      <div className="flex items-center my-6">
+        <div className="flex-grow border-t border-zinc-200 dark:border-zinc-700"></div>
+        <span className="mx-4 text-zinc-500 dark:text-zinc-400 font-medium text-sm">
+          {t('uploader.or') || 'OR'}
+        </span>
+        <div className="flex-grow border-t border-zinc-200 dark:border-zinc-700"></div>
+      </div>
+
+      <Card className="mb-6">
+        <label htmlFor="content-url" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          {t('uploader.urlInput') || 'Enter URL'}
+        </label>
+        <input
+          type="url"
+          id="content-url"
+          value={urlValue}
+          onChange={handleUrlChange}
+          placeholder={t('uploader.urlPlaceholder') || 'https://example.com/article'}
+          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+          disabled={isProcessing}
+        />
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+          Supports web pages, articles, and online documents
+        </p>
       </Card>
 
       <div className="flex items-center my-6">
