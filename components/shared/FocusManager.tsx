@@ -62,7 +62,12 @@ export const FocusManager: React.FC<FocusManagerProps> = ({
 
           // Try to find element by other means
           if (className) {
-            const elements = document.querySelectorAll(tagName + '.' + className.replace(/\s+/g, '.'));
+            // Properly escape and combine class names for selector
+            const classSelector = className
+              .split(/\s+/)
+              .map(cls => CSS.escape(cls))
+              .join('.');
+            const elements = document.querySelectorAll(tagName + '.' + classSelector);
             if (elements.length > 0) {
               (elements[0] as HTMLElement).focus();
               return;
