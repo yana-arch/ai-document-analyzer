@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { createTables } from './db/schema';
+import { migrateDatabase, getSchemaVersion } from './db/schema';
 
 const app = express();
 
@@ -43,15 +43,29 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { fileName, documentText, analysis } = req.body;
+  const { fileName, documentText, analysis, contentHash } = req.body;
   try {
     const newDocument = await pool.query(
-      'INSERT INTO documents (file_name, document_text, analysis) VALUES ($1, $2, $3) RETURNING *',
-      [fileName, documentText, analysis]
+      'INSERT INTO documents (file_name, document_text, analysis, content_hash) VALUES ($1, $2, $3, $4) RETURNING *',
+      [fileName, documentText, analysis, contentHash]
     );
     res.json(newDocument.rows[0]);
   } catch (error) {
     console.error('Error inserting document:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/documents/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const document = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    if (document.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    res.json(document.rows[0]);
+  } catch (error) {
+    console.error('Error getting document:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -76,6 +90,20 @@ app.post('/api/interviews', async (req, res) => {
     res.json(newInterview.rows[0]);
   } catch (error) {
     console.error('Error inserting interview:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/interviews/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const interview = await pool.query('SELECT * FROM interviews WHERE id = $1', [id]);
+    if (interview.rows.length === 0) {
+      return res.status(404).json({ error: 'Interview not found' });
+    }
+    res.json(interview.rows[0]);
+  } catch (error) {
+    console.error('Error getting interview:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -128,6 +156,20 @@ app.post('/api/question_banks', async (req, res) => {
   }
 });
 
+app.get('/api/question_banks/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const questionBank = await pool.query('SELECT * FROM question_banks WHERE id = $1', [id]);
+    if (questionBank.rows.length === 0) {
+      return res.status(404).json({ error: 'Question bank not found' });
+    }
+    res.json(questionBank.rows[0]);
+  } catch (error) {
+    console.error('Error getting question bank:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/api/question_banks', async (req, res) => {
   try {
     const allQuestionBanks = await pool.query('SELECT * FROM question_banks ORDER BY created_at DESC');
@@ -138,8 +180,31 @@ app.get('/api/question_banks', async (req, res) => {
   }
 });
 
+// Database info endpoint
+app.get('/api/db/info', async (req, res) => {
+  try {
+    const schemaVersion = await getSchemaVersion();
+    const [documentsCount] = (await pool.query('SELECT COUNT(*) FROM documents')).rows;
+    const [interviewsCount] = (await pool.query('SELECT COUNT(*) FROM interviews')).rows;
+    const [questionBanksCount] = (await pool.query('SELECT COUNT(*) FROM question_banks')).rows;
+
+    res.json({
+      schemaVersion,
+      lastMigration: new Date().toISOString(),
+      counts: {
+        documents: parseInt(documentsCount.count),
+        interviews: parseInt(interviewsCount.count),
+        questionBanks: parseInt(questionBanksCount.count)
+      }
+    });
+  } catch (error) {
+    console.error('Error getting database info:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 const startServer = async () => {
-  await createTables();
+  await migrateDatabase();
   app.listen(port, () => {
     console.log(`Backend server is running on http://localhost:${port}`);
   });

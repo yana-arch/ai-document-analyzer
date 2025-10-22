@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem, QuizQuestion } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
-import { saveDocument, saveInterview, syncLocalHistoryToDatabase, checkForDuplicates, checkInterviewDuplicates } from './services/databaseService';
+import { saveDocument, saveInterview, syncAllToDatabase, browseDatabaseContent, checkForDuplicates, checkInterviewDuplicates } from './services/databaseService';
 const PracticeCenter = lazy(() => import('./components/PracticeCenter'));
 const OptimizedStudyModule = lazy(() => import('./components/OptimizedStudyModule'));
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
@@ -14,6 +14,7 @@ import { ProcessResult } from './components/ContentUploader';
 import Loader, { ProgressIndicator, AnalysisStep } from './components/shared/Loader';
 import HistoryList from './components/HistoryList';
 import SettingsModal from './components/SettingsModal';
+import DatabaseBrowser from './components/DatabaseBrowser';
 import ErrorBoundary from './components/ErrorBoundary';
 import PerformanceMonitor from './components/PerformanceMonitor';
 import CVInterviewManager from './components/CVInterviewManager';
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [isDatabaseBrowserOpen, setIsDatabaseBrowserOpen] = useState<boolean>(false);
   const [activeInterview, setActiveInterview] = useState<CVInterview | null>(null);
   const [questionBank, setQuestionBank] = useState<QuizQuestion[]>([]);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
@@ -291,8 +293,75 @@ const AppContent: React.FC = () => {
   };
 
   const handleSyncToDatabase = useCallback(async () => {
+    let progressCompleted = 0;
+    let progressTotal = history.length + questionBank.length;
+    let currentItem = 'Initializing...';
+
     try {
-      const results = await syncLocalHistoryToDatabase(history);
+      // Show enhanced progress modal
+      const progressDiv = document.createElement('div');
+      progressDiv.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300';
+      progressDiv.innerHTML = `
+        <div class="bg-white/95 dark:bg-zinc-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/50 p-8 max-w-md w-full mx-4">
+          <div class="text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl mx-auto mb-6 animate-bounce">
+              <svg class="w-8 h-8 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" style="animation-duration: 1.5s;"></path>
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Syncing to Database</h3>
+            <p id="progress-text" class="text-sm text-zinc-600 dark:text-zinc-400 mb-6 font-medium">Preparing items...</p>
+            <div class="relative mb-4">
+              <div class="bg-zinc-200 dark:bg-zinc-700 rounded-full h-3 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out shadow-lg" style="width: 0%"></div>
+              </div>
+              <div class="mt-2 flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                <span>0%</span>
+                <span id="progress-count">Syncing...</span>
+                <span>100%</span>
+              </div>
+            </div>
+            <div class="w-full bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3 border border-zinc-200/50 dark:border-zinc-700/50">
+              <div class="flex items-center justify-center space-x-2 text-sm text-zinc-700 dark:text-zinc-300">
+                <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M9 8h6m-6 8h6"></path>
+                </svg>
+                <span id="sync-status">Processing documents, interviews & question banks...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(progressDiv);
+
+      const updateProgress = (completed: number, total: number, item: string) => {
+        progressCompleted = completed;
+        progressTotal = total;
+        currentItem = item;
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const progressCount = document.getElementById('progress-count');
+        const syncStatus = document.getElementById('sync-status');
+
+        if (progressText) progressText.textContent = item;
+        if (progressBar) {
+          progressBar.style.width = `${(completed / total) * 100}%`;
+        }
+        if (progressCount) {
+          const percentage = Math.round((completed / total) * 100);
+          progressCount.textContent = `${percentage}%`;
+        }
+        if (syncStatus) {
+          const remaining = total - completed;
+          syncStatus.textContent = remaining > 0 ? `Processing: ${item}` : `Finalizing sync...`;
+        }
+      };
+
+      const results = await syncAllToDatabase(history, questionBank, updateProgress);
+
+      // Close progress modal
+      document.body.removeChild(progressDiv);
+
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
@@ -302,10 +371,15 @@ const AppContent: React.FC = () => {
         alert(`Synced ${successCount} items successfully. ${failCount} items failed (likely duplicates).`);
       }
     } catch (error) {
+      // Clean up progress modal if it exists
+      try {
+        document.body.removeChild(document.querySelector('.fixed.inset-0.bg-black\\/50'));
+      } catch {}
+
       console.error('Failed to sync to database:', error);
       alert('Failed to sync to database. Please check your connection.');
     }
-  }, [history]);
+  }, [history, questionBank]);
 
   const handleReset = () => {
     setViewState('upload');
@@ -388,6 +462,19 @@ const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-1 sm:space-x-4">
+            <button
+              onClick={() => setIsDatabaseBrowserOpen(true)}
+              className="p-1.5 sm:p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-manipulation"
+              title="Browse Database"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M9 8h6m-6 8h6" />
+                <circle cx="4" cy="12" r="2" />
+                <circle cx="20" cy="6" r="2" />
+                <circle cx="20" cy="12" r="2" />
+                <circle cx="20" cy="18" r="2" />
+              </svg>
+            </button>
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="p-1.5 sm:p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors touch-manipulation"
@@ -502,6 +589,39 @@ const AppContent: React.FC = () => {
           onSaveSettings={handleSaveSettings}
           onSyncToDatabase={handleSyncToDatabase}
           t={t}
+        />
+        <DatabaseBrowser
+          isOpen={isDatabaseBrowserOpen}
+          onClose={() => setIsDatabaseBrowserOpen(false)}
+          onDownloadToLocal={(item, data) => {
+            if (item.type === 'question_bank' && data) {
+              // Add question bank to local storage
+              const existingBanks = [...questionBank];
+              const bankExists = existingBanks.some(bank => bank.question === item.title);
+              if (!bankExists) {
+                const newBank = data.questions?.map((q: any, index: number) => ({
+                  id: `${item.title}_${index}`,
+                  question: q.question || q,
+                  type: 'multiple-choice',
+                  options: q.options || [],
+                  correctAnswerIndex: q.correctAnswerIndex || 0,
+                  explanation: q.explanation || '',
+                  tags: []
+                })) || [];
+                setQuestionBank(prev => [...prev, ...newBank]);
+                try {
+                  localStorage.setItem('questionBank', JSON.stringify([...existingBanks, ...newBank]));
+                } catch (err) {
+                  console.error("Failed to save question bank to localStorage", err);
+                }
+              }
+            }
+          }}
+          onLoadToHistory={(historyItem) => {
+            // Add directly to local history for immediate analysis
+            updateHistory(historyItem);
+            alert('Content downloaded and added to your local history!');
+          }}
         />
         {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
       </div>

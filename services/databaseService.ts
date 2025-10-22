@@ -28,9 +28,9 @@ api.interceptors.response.use(
 );
 
 // Documents
-export const saveDocument = async (fileName: string, documentText: string, analysis: any) => {
+export const saveDocument = async (fileName: string, documentText: string, analysis: any, contentHash?: string) => {
   try {
-    const response = await api.post('/documents', { fileName, documentText, analysis });
+    const response = await api.post('/documents', { fileName, documentText, analysis, contentHash });
     return response.data;
   } catch (error) {
     console.error('Error saving document:', error);
@@ -138,27 +138,59 @@ export const getQuestionBanks = async () => {
   }
 };
 
+// Utility function for content hashing
+const hashContent = async (content: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 // Sync functions for local storage to database
-export const syncLocalHistoryToDatabase = async (historyItems: any[]) => {
-  try {
-    const results = [];
-    for (const item of historyItems) {
-      if (item.type === 'document') {
+export const syncLocalHistoryToDatabase = async (
+  historyItems: any[],
+  onProgress?: (completed: number, total: number, currentItem: string) => void
+) => {
+  const results = [];
+  let completed = 0;
+  const total = historyItems.length;
+
+  for (const item of historyItems) {
+    if (onProgress) {
+      onProgress(completed, total, item.type === 'document' ? item.fileName : item.type === 'interview' ? item.interview.targetPosition : item.type);
+    }
+
+    if (item.type === 'document') {
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
         try {
-          // Check for duplicates before saving
-          const isDuplicate = await checkForDuplicates(item.fileName, item.documentText);
+          // Check for duplicates using content hash
+          const contentHash = await hashContent(item.documentText + JSON.stringify(item.analysis));
+          const isDuplicate = await checkForDuplicatesByHash(contentHash);
           if (isDuplicate) {
             results.push({ type: 'document', fileName: item.fileName, success: false, error: 'Duplicate document' });
-            continue;
+            break;
           }
 
-          await saveDocument(item.fileName, item.documentText, item.analysis);
+          await saveDocument(item.fileName, item.documentText, item.analysis, contentHash);
           results.push({ type: 'document', fileName: item.fileName, success: true });
+          break; // Success, exit retry loop
         } catch (error) {
-          console.error(`Failed to sync document ${item.fileName}:`, error);
-          results.push({ type: 'document', fileName: item.fileName, success: false, error: error.message });
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            console.error(`Failed to sync document ${item.fileName} after ${maxRetries} attempts:`, error);
+            results.push({ type: 'document', fileName: item.fileName, success: false, error: error.message });
+          } else {
+            console.warn(`Retry ${retryCount}/${maxRetries} for document ${item.fileName}:`, error);
+            // Wait with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+          }
         }
-      } else if (item.type === 'interview') {
+      }
+    } else if (item.type === 'interview') {
         try {
           // Check for duplicates before saving
           const isDuplicate = await checkInterviewDuplicates(item.interview.targetPosition, item.interview.cvContent);
@@ -185,13 +217,51 @@ export const syncLocalHistoryToDatabase = async (historyItems: any[]) => {
           console.error(`Failed to sync interview ${item.interview.targetPosition}:`, error);
           results.push({ type: 'interview', targetPosition: item.interview.targetPosition, success: false, error: error.message });
         }
+    } else if (item.type === 'question_bank') {
+      try {
+        const bank = item.bank;
+        // Check for duplicates by name
+        const existingBanks = await getQuestionBanks();
+        const isDuplicate = existingBanks.some((existing: any) => existing.name === bank.name);
+        if (isDuplicate) {
+          results.push({ type: 'question_bank', name: bank.name, success: false, error: 'Duplicate question bank' });
+          completed++;
+          continue;
+        }
+
+        await saveQuestionBank({
+          name: bank.name,
+          description: bank.description,
+          subject: bank.subject,
+          tags: bank.tags,
+          questions: bank.questions,
+          isPublic: bank.isPublic,
+          usageCount: bank.usageCount
+        });
+        results.push({ type: 'question_bank', name: bank.name, success: true });
+      } catch (error) {
+        console.error(`Failed to sync question bank ${item.bank.name}:`, error);
+        results.push({ type: 'question_bank', name: item.bank.name, success: false, error: error.message });
       }
     }
-    return results;
-  } catch (error) {
-    console.error('Error syncing local history to database:', error);
-    throw error;
+
+    completed++;
   }
+  return results;
+};
+
+// Enhanced sync function that includes question banks
+export const syncAllToDatabase = async (
+  historyItems: any[],
+  questionBank: any[],
+  onProgress?: (completed: number, total: number, currentItem: string) => void
+) => {
+  const allItems = [
+    ...historyItems,
+    ...questionBank.map(bank => ({ type: 'question_bank', bank }))
+  ];
+
+  return await syncLocalHistoryToDatabase(allItems, onProgress);
 };
 
 export const checkForDuplicates = async (fileName: string, documentText: string) => {
@@ -215,6 +285,91 @@ export const checkInterviewDuplicates = async (targetPosition: string, cvContent
   } catch (error) {
     console.error('Error checking for interview duplicates:', error);
     return false;
+  }
+};
+
+export const checkForDuplicatesByHash = async (contentHash: string) => {
+  try {
+    const documents = await getDocuments();
+    return documents.some((doc: any) => doc.content_hash === contentHash);
+  } catch (error) {
+    console.error('Error checking for duplicates by hash:', error);
+    return false;
+  }
+};
+
+// Database Content Download Functions
+export const browseDatabaseContent = async () => {
+  try {
+    const [documents, interviews, questionBanks] = await Promise.all([
+      getDocuments(),
+      getInterviews(),
+      getQuestionBanks()
+    ]);
+
+    return {
+      documents: documents.map(doc => ({
+        id: doc.id,
+        type: 'document' as const,
+        title: doc.file_name,
+        createdAt: doc.created_at,
+        contentHash: doc.content_hash,
+        metadata: {
+          topics: doc.analysis?.topics?.join(', ') || '',
+          sentiment: doc.analysis?.sentiment || '',
+          entities: doc.analysis?.entities?.length || 0
+        }
+      })),
+      interviews: interviews.map(interview => ({
+        id: interview.id,
+        type: 'interview' as const,
+        title: `${interview.target_position} (${interview.interview_type})`,
+        createdAt: interview.created_at,
+        status: interview.status,
+        score: interview.overall_score
+      })),
+      questionBanks: questionBanks.map(bank => ({
+        id: bank.id,
+        type: 'question_bank' as const,
+        title: bank.name,
+        createdAt: bank.created_at,
+        questionCount: bank.questions?.length || 0,
+        subject: bank.subject
+      }))
+    };
+  } catch (error) {
+    console.error('Error browsing database content:', error);
+    throw error;
+  }
+};
+
+export const getDocumentById = async (id: string) => {
+  try {
+    const response = await api.get(`/documents/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting document by ID:', error);
+    throw error;
+  }
+};
+
+export const getInterviewById = async (id: string) => {
+  try {
+    const response = await api.get(`/interviews/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting interview by ID:', error);
+    throw error;
+  }
+};
+
+export const getQuestionBankById = async (id: string) => {
+  try {
+    const response = await api.get(`/question-banks/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting question bank by ID:', error);
+    throw error;
   }
 };
 
