@@ -138,6 +138,86 @@ export const getQuestionBanks = async () => {
   }
 };
 
+// Sync functions for local storage to database
+export const syncLocalHistoryToDatabase = async (historyItems: any[]) => {
+  try {
+    const results = [];
+    for (const item of historyItems) {
+      if (item.type === 'document') {
+        try {
+          // Check for duplicates before saving
+          const isDuplicate = await checkForDuplicates(item.fileName, item.documentText);
+          if (isDuplicate) {
+            results.push({ type: 'document', fileName: item.fileName, success: false, error: 'Duplicate document' });
+            continue;
+          }
+
+          await saveDocument(item.fileName, item.documentText, item.analysis);
+          results.push({ type: 'document', fileName: item.fileName, success: true });
+        } catch (error) {
+          console.error(`Failed to sync document ${item.fileName}:`, error);
+          results.push({ type: 'document', fileName: item.fileName, success: false, error: error.message });
+        }
+      } else if (item.type === 'interview') {
+        try {
+          // Check for duplicates before saving
+          const isDuplicate = await checkInterviewDuplicates(item.interview.targetPosition, item.interview.cvContent);
+          if (isDuplicate) {
+            results.push({ type: 'interview', targetPosition: item.interview.targetPosition, success: false, error: 'Duplicate interview' });
+            continue;
+          }
+
+          await saveInterview({
+            cvContent: item.interview.cvContent,
+            cvFileName: item.interview.cvFileName,
+            targetPosition: item.interview.targetPosition,
+            interviewType: item.interview.interviewType,
+            customPrompt: item.interview.customPrompt,
+            questions: item.interview.questions,
+            answers: item.interview.answers,
+            overallScore: item.interview.feedback?.overallScore,
+            feedback: item.interview.feedback,
+            completedAt: item.interview.completedAt,
+            status: item.interview.status
+          });
+          results.push({ type: 'interview', targetPosition: item.interview.targetPosition, success: true });
+        } catch (error) {
+          console.error(`Failed to sync interview ${item.interview.targetPosition}:`, error);
+          results.push({ type: 'interview', targetPosition: item.interview.targetPosition, success: false, error: error.message });
+        }
+      }
+    }
+    return results;
+  } catch (error) {
+    console.error('Error syncing local history to database:', error);
+    throw error;
+  }
+};
+
+export const checkForDuplicates = async (fileName: string, documentText: string) => {
+  try {
+    const documents = await getDocuments();
+    return documents.some((doc: any) =>
+      doc.file_name === fileName && doc.document_text === documentText
+    );
+  } catch (error) {
+    console.error('Error checking for duplicates:', error);
+    return false;
+  }
+};
+
+export const checkInterviewDuplicates = async (targetPosition: string, cvContent: string) => {
+  try {
+    const interviews = await getInterviews();
+    return interviews.some((interview: any) =>
+      interview.target_position === targetPosition && interview.cv_content === cvContent
+    );
+  } catch (error) {
+    console.error('Error checking for interview duplicates:', error);
+    return false;
+  }
+};
+
 // Export functions for download
 export const downloadDocument = (item: any) => {
   const data = {

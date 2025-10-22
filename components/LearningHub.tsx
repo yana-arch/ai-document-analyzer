@@ -13,6 +13,7 @@ interface LearningHubProps {
   onProcess: (result: ProcessResult) => void;
   onLoadHistory: (item: HistoryItem) => void;
   onImportHistory: (mergedHistory: HistoryItem[]) => void;
+  onSyncToDatabase?: () => void;
 }
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -29,7 +30,7 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
   </Card>
 );
 
-const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHistory, onImportHistory }) => {
+const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHistory, onImportHistory, onSyncToDatabase }) => {
   const { locale, t } = useLanguage();
 
   const stats = useMemo(() => {
@@ -64,7 +65,7 @@ const LearningHub: React.FC<LearningHubProps> = ({ history, onProcess, onLoadHis
       <div>
         {/* <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">{t('hub.historyTitle')}</h2> */}
         <Suspense fallback={<div className='h-32 sm:h-48 lg:h-64 w-full bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse' />}>
-          <HistoryList items={history} onLoadItem={onLoadHistory} onImportHistory={onImportHistory} />
+          <HistoryList items={history} onLoadItem={onLoadHistory} onImportHistory={onImportHistory} onSyncToDatabase={onSyncToDatabase} />
         </Suspense>
       </div>
     </div>

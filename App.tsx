@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, Suspense, lazy } from 'react';
 import { AnalysisResult, HistoryItem, UserSettings, CVInterview, DocumentHistoryItem, InterviewHistoryItem, QuizQuestion } from './types';
 import { extractTextFromSource } from './services/documentProcessor';
-import { saveDocument, saveInterview } from './services/databaseService';
+import { saveDocument, saveInterview, syncLocalHistoryToDatabase, checkForDuplicates, checkInterviewDuplicates } from './services/databaseService';
 const PracticeCenter = lazy(() => import('./components/PracticeCenter'));
 const OptimizedStudyModule = lazy(() => import('./components/OptimizedStudyModule'));
 import UploadSkeleton from './components/skeletons/UploadSkeleton';
@@ -44,7 +44,17 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     try {
       const savedHistory = localStorage.getItem(HISTORY_KEY);
-      if (savedHistory) setHistory(JSON.parse(savedHistory));
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        // Ensure all history items have unique IDs
+        const historyWithIds = parsedHistory.map((item: any) => {
+          if (!item.id) {
+            item.id = `${item.type}-${item.fileName || item.interview?.targetPosition || 'unknown'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          }
+          return item;
+        });
+        setHistory(historyWithIds);
+      }
 
       const savedBank = localStorage.getItem('questionBank');
       if (savedBank) setQuestionBank(JSON.parse(savedBank));
@@ -280,6 +290,23 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleSyncToDatabase = useCallback(async () => {
+    try {
+      const results = await syncLocalHistoryToDatabase(history);
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      if (failCount === 0) {
+        alert(`Successfully synced ${successCount} items to database!`);
+      } else {
+        alert(`Synced ${successCount} items successfully. ${failCount} items failed (likely duplicates).`);
+      }
+    } catch (error) {
+      console.error('Failed to sync to database:', error);
+      alert('Failed to sync to database. Please check your connection.');
+    }
+  }, [history]);
+
   const handleReset = () => {
     setViewState('upload');
     setDocumentText(null);
@@ -448,11 +475,12 @@ const AppContent: React.FC = () => {
       default:
         return (
           <Suspense fallback={<UploadSkeleton />}>
-            <LearningHub 
-              history={history} 
-              onProcess={handleProcess} 
-              onLoadHistory={handleLoadHistory} 
-              onImportHistory={handleImportHistory} 
+            <LearningHub
+              history={history}
+              onProcess={handleProcess}
+              onLoadHistory={handleLoadHistory}
+              onImportHistory={handleImportHistory}
+              onSyncToDatabase={handleSyncToDatabase}
             />
           </Suspense>
         );

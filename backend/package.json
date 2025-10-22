@@ -1,5 +1,27 @@
 {
+  "name": "ai-document-analyzer-backend",
+  "version": "1.0.0",
+  "description": "Backend server for AI Document Analyzer",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
   "dependencies": {
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.10",
+    "@types/pg": "^8.15.5",
+    "tsx": "^4.19.2",
+    "typescript": "~5.8.2"
   }
 }
