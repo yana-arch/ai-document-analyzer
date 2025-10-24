@@ -229,7 +229,8 @@ const translations = {
       startInterview: "Start Interview",
       pasteCV: 'Paste content over there',
       pasteDoc: 'Paste content over there',
-      supportedFormats:"Supported file types"
+      supportedFormats:"Supported file types",
+      supportConvert: "The website supports file conversion"
     },
     dashboard: { // Kept for backwards compatibility, but new keys are in studyModule
       analysisFor: "Analysis for:",
@@ -640,7 +641,8 @@ const translations = {
       startInterview: "Bắt đầu Phỏng vấn",
       pasteCV: 'Dán nội dung CV ở đây',
       pasteDoc: 'Dán nội dung tài liệu ở đây',
-      supportedFormats:"Các loại file hỗ trợ"
+      supportedFormats:"Các loại file hỗ trợ",
+      supportConvert: "Trang web hỗ trợ chuyển đổi file"
     },
     dashboard: {
       analysisFor: "Phân tích cho:",

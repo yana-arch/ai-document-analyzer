@@ -245,10 +245,10 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
 
   const renderStep2 = () => (
     <div>
-      <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+      <h3 className="text-center text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
         {t('uploader.provideContent') || 'Provide Content'}
       </h3>
-      <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+      <p className="text-center text-zinc-600 dark:text-zinc-400 mb-6">
         {t('uploader.contentHelp') || 'Upload your file or paste your content below'}
       </p>
 
@@ -289,6 +289,8 @@ const WizardContentUploader: React.FC<WizardContentUploaderProps> = ({ onProcess
             </div>
           </label>
         </div>
+        <p className="text-center mt-2">{t('uploader.supportConvert')}</p>
+        <p class="text-center"><a href="https://convertio.co/" className="text-zinc-400 dark:text-zinc-500">https://convertio.co/</a></p>
       </Card>
 
       <div className="flex items-center my-6">
