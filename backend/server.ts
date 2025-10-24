@@ -189,7 +189,7 @@ app.post('/api/extract-url', async (req, res) => {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const axios = await import('axios');
+    const axios = (await import('axios')).default;
 
     const apiUrl = "https://urltotext.com/api/v1/urltotext/";
     const headers = {
@@ -200,14 +200,14 @@ app.post('/api/extract-url', async (req, res) => {
     // Form data as URL-encoded string
     const payloadData = new URLSearchParams({
       "url": url,
-      "output_format": "text",
+      "output_format": "markdown",  // Use markdown for better formatting
       "extract_main_content": "false",
       "render_javascript": "false",
       "residential_proxy": "false",
       "stealth_proxy": "false"
     }).toString();
 
-    const response = await axios.default.post(apiUrl, payloadData, {
+    const response = await axios.post(apiUrl, payloadData, {
       headers,
       timeout: 60000
     });
@@ -217,10 +217,35 @@ app.post('/api/extract-url', async (req, res) => {
     // Parse response and extract content
     const data = response.data;
     if (data && data.data && data.data.content) {
+      // Format the extracted content for better readability
+      let formattedText = data.data.content;
+
+      // Clean up excessive whitespace but preserve meaningful line breaks
+      formattedText = formattedText
+        // Remove excessive blank lines (more than 3 consecutive)
+        .replace(/\n{4,}/g, '\n\n\n')
+        // Trim whitespace from each line while preserving intentional indentation (for code blocks)
+        .split('\n')
+        .map((line: string) => {
+          // For lines that look like code (start with whitespace or contain code patterns), preserve indentation
+          if (line.match(/^(\s{4,}|\t+)/) || line.includes('```') || line.match(/^\s+.*[{}\[\]();]$/)) {
+            return line; // Keep code block indentation
+          } else {
+            return line.trim(); // Trim regular text lines
+          }
+        })
+        .join('\n')
+        // Clean up multiple spaces
+        .replace(/ {2,}/g, ' ')
+        // Ensure paragraphs are properly separated
+        .replace(/([.!?])\s*\n\s*([A-Z])/g, '$1\n\n$2')
+        .trim();
+
       res.json({
-        extractedText: data.data.content.trim(),
+        extractedText: formattedText,
         title: data.data.page_title,
-        url: data.data.url
+        url: data.data.url,
+        format: 'markdown'
       });
     } else {
       throw new Error('Invalid response format from URLTOTEXT API');
@@ -230,6 +255,72 @@ app.post('/api/extract-url', async (req, res) => {
     res.status(500).json({
       error: 'Failed to extract text from URL',
       details: error.response?.data || error.message
+    });
+  }
+});
+
+// Format existing documents endpoint
+app.post('/api/format-documents', async (req, res) => {
+  try {
+    // Get all documents with their current text content
+    const documents = await pool.query('SELECT id, document_text FROM documents WHERE document_text IS NOT NULL AND LENGTH(document_text) > 0');
+
+    console.log(`Found ${documents.rows.length} documents to reformat`);
+
+    let updatedCount = 0;
+    const results = [];
+
+    for (const doc of documents.rows) {
+      try {
+        // Format the document text using the same utility as frontend
+        let formattedText = doc.document_text;
+
+        // Apply the same formatting rules
+        formattedText = formattedText
+          // Remove excessive blank lines (more than 3 consecutive)
+          .replace(/\n{4,}/g, '\n\n\n')
+          // Trim whitespace from each line while preserving intentional indentation (for code blocks)
+          .split('\n')
+          .map((line: string) => {
+            // For lines that look like code (start with whitespace or contain code patterns), preserve indentation
+            if (line.match(/^(\s{4,}|\t+)/) || line.includes('```') || line.match(/^\s+.*[{}\[\]();]$/)) {
+              return line; // Keep code block indentation
+            } else {
+              return line.trim(); // Trim regular text lines
+            }
+          })
+          .join('\n')
+          // Clean up multiple spaces
+          .replace(/ {2,}/g, ' ')
+          // Ensure paragraphs are properly separated
+          .replace(/([.!?])\s*\n\s*([A-Z])/g, '$1\n\n$2')
+          .trim();
+
+        // Only update if the text actually changed
+        if (formattedText !== doc.document_text) {
+          await pool.query('UPDATE documents SET document_text = $1 WHERE id = $2', [formattedText, doc.id]);
+          updatedCount++;
+          results.push({ id: doc.id, status: 'updated', originalLength: doc.document_text.length, newLength: formattedText.length });
+        } else {
+          results.push({ id: doc.id, status: 'unchanged' });
+        }
+      } catch (docError) {
+        console.error(`Error formatting document ${doc.id}:`, docError);
+        results.push({ id: doc.id, status: 'error', error: (docError as Error).message });
+      }
+    }
+
+    res.json({
+      totalDocuments: documents.rows.length,
+      updatedDocuments: updatedCount,
+      results
+    });
+
+  } catch (error: any) {
+    console.error('Error formatting documents:', error);
+    res.status(500).json({
+      error: 'Failed to format documents',
+      details: error.message
     });
   }
 });

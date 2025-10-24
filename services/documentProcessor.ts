@@ -47,6 +47,8 @@ const extractTextFromUrlWithExtractor = async (url: string): Promise<string> => 
   }
 };
 
+
+
 /**
  * Extracts text from a PDF file buffer
  * @param arrayBuffer The PDF file buffer
@@ -113,16 +115,16 @@ const extractTextFromHtml = (html: string): string => {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    
+
     // Remove elements that don't typically contribute to the main article content
     doc.querySelectorAll('script, style, nav, header, footer, aside, form, button, [role="navigation"], [role="banner"], [role="contentinfo"]').forEach(el => el.remove());
 
     const body = doc.body || doc.documentElement;
     let text = body.textContent || '';
-    
+
     // Clean up excessive whitespace and newlines for better readability
     text = text.replace(/(\r\n|\n|\r)/gm, "\n").replace(/[\t ]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
-    
+
     return text;
   } catch (error) {
     console.error("Failed to parse HTML", error);
@@ -132,11 +134,116 @@ const extractTextFromHtml = (html: string): string => {
 };
 
 /**
+ * Formats extracted text content for better readability while preserving code blocks and structure
+ * @param text The raw extracted text content
+ * @returns Formatted text with proper line breaks and cleaned up whitespace
+ */
+export const formatExtractedContent = (text: string): string => {
+  let formatted = text;
+
+  // Remove obvious navigation/common patterns
+  formatted = formatted
+    // Remove common navigation phrases
+    .replace(/(Skip to content|Log in|Sign up|Contact|Home|About|Services|Products|Pricing|Blog|Documentation|Support|Help|FAQ|Terms|Privacy|Search|Menu|Navigation|Footer|Header)/gi, '')
+    // Remove email patterns and common web elements
+    .replace(/[\w.-]+@\w+\.\w+/g, '') // emails
+    // Remove phone numbers
+    .replace(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g, '')
+    // Remove URLs
+    .replace(/https?:\/\/[^\s]+/gi, '')
+    // Remove common ad patterns and social media
+    .replace(/\b(facebook|twitter|instagram|linkedin|youtube|whatsapp|telegram)\b/gi, '')
+    .replace(/\b(subscribe|newsletter|updates|notifications|feed)\b/gi, '')
+    // Remove common hosting/service mentions that are usually boilerplate
+    .replace(/(wordpress hosting|vps hosting|cloud hosting|dedicated server|managed hosting|domain registration|ssl certificate|backup service|security service)/gi, '')
+    // Remove pricing patterns
+    .replace(/\$[\d,]+(?:\.\d{2})?(?:\/mo|\/month)?/gi, '');
+
+  // Clean up HTML-like content and navigation structure
+  formatted = formatted
+    // Remove common header/footer content
+    .replace(/(Liquid Web|© \d{4}|All rights reserved|Loading form|\.\.\.|Close|Toggle|Expand|Menu|Navigation)/gi, '')
+    // Remove common menu items and boilerplate
+    .replace(/\b(Chat now|Get Help|Sales|Support|Billing)\b/gi, '')
+    .replace(/\b(Windows VPS|Linux VPS|Ubuntu VPS|cPanel VPS|KVM VPS)\b/gi, '')
+    // Remove sizes and dimensions
+    .replace(/\d+\s*(min read|min|minutes?|seconds?|hours?)\s*read/i, '')
+    .replace(/\d+\s*(words?|characters?|bytes?)/i, '');
+
+  // Fix spacing and line breaks before final cleanup
+  formatted = formatted
+    // Remove excessive blank lines
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove excessive spaces
+    .replace(/ {2,}/g, ' ')
+    .replace(/\t+/g, ' ');
+
+  // Preserve code blocks and structure
+  formatted = formatted
+    .split('\n')
+    .map((line: string) => {
+      const trimmed = line.trim();
+      // Skip empty lines and obvious boilerplate
+      if (!trimmed ||
+          trimmed.length < 3 ||
+          /\b(social media|share this|related posts|tags|categories)\b/i.test(trimmed) ||
+          /^\d+\s+comments?$/i.test(trimmed)) {
+        return '';
+      }
+
+      // For lines that look like code or structured content, preserve spacing
+      if (line.match(/^(\s{4,}|\t+)/) ||  // Indented code
+          line.includes('<?php') || line.includes('<?') ||  // PHP/HTML tags
+          line.match(/^\s*[\{\[\(\}]\s*[\w\W]*[\)\]\}]\s*$/) ||  // Code patterns
+          line.match(/^\s*function\s+\w+\s*\(/) ||  // Function declarations
+          line.match(/^\s*(class|interface|namespace)\s+\w+/) ||  // PHP class/interfaces
+          line.includes('=>') || line.match(/[$@%]\w+/) ||  // PHP variables
+          /^\s*[\/\/\/\/|#|\/\/\*|<!---]/.test(line)) { // Comments
+        return line; // Keep code and structured content as-is
+      }
+
+      // For regular text, clean up
+      return trimmed.length > 10 ? trimmed : ''; // Remove very short lines
+    })
+    .filter(line => line.length > 0) // Remove empty lines
+    .join('\n')
+    .trim();
+
+  // Final cleanup
+  formatted = formatted
+    .replace(/\n{3,}/g, '\n\n')  // No more than 2 consecutive line breaks
+    .replace(/^\s+/gm, '')       // Remove leading spaces from each line
+    .replace(/\s+$/gm, '')       // Remove trailing spaces from each line
+    // Ensure proper paragraph breaks
+    .replace(/([.!?])\s*\n\s*([A-Z])/g, '$1\n\n$2')
+    .trim();
+
+  return formatted;
+};
+
+/**
  * Extracts text content from either a file or a URL.
  * @param source A File object or a URL string.
  * @returns A promise that resolves with the extracted text content or rejects with an error key.
  */
 export const extractTextFromSource = (source: File | string): Promise<string> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const rawText = await extractTextFromSourceUnformatted(source);
+      const formattedText = formatExtractedContent(rawText);
+      resolve(formattedText);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+/**
+ * Extracts text content without formatting (for internal use)
+ * @param source A File object or a URL string.
+ * @returns A promise that resolves with the raw extracted text content or rejects with an error key.
+ */
+const extractTextFromSourceUnformatted = (source: File | string): Promise<string> => {
   return new Promise(async (resolve, reject) => {
     if (source instanceof File) {
       // Handle file upload
@@ -286,7 +393,8 @@ export const extractTextFromSource = (source: File | string): Promise<string> =>
           }
 
           const htmlContent: string = data.contents;
-          const extractedText = extractTextFromHtml(htmlContent);
+          const rawText = extractTextFromHtml(htmlContent);
+          const extractedText = formatExtractedContent(rawText);
 
           // Heuristic check: if the extracted text is too short, it's likely not a useful article.
           if (!extractedText || extractedText.length < 100) {

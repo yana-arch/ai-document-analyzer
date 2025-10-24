@@ -6,6 +6,7 @@ import EntityExtractor from './EntityExtractor';
 import Card from './shared/Card';
 import Breadcrumb from './shared/Breadcrumb';
 import { useLanguage } from '../contexts/LanguageContext';
+import { formatExtractedContent } from '../services/documentProcessor';
 
 // Lazy load heavy components
 const QnAChat = lazy(() => import('./QnAChat'));
@@ -25,6 +26,9 @@ const OptimizedStudyModule: React.FC<StudyModuleProps> = memo(({ analysis, docum
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [showFullText, setShowFullText] = useState(false);
+  const [formattedDocumentText, setFormattedDocumentText] = useState(documentText);
+  const [isFormatted, setIsFormatted] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -60,6 +64,28 @@ const OptimizedStudyModule: React.FC<StudyModuleProps> = memo(({ analysis, docum
     { label: fileName, current: true }
   ], [fileName, t]);
 
+  // Format document text
+  const handleFormatDocumentText = useCallback(() => {
+    setIsFormatting(true);
+    try {
+      const formatted = formatExtractedContent(documentText);
+      setFormattedDocumentText(formatted);
+      setIsFormatted(true);
+      console.log(`Document formatted: ${documentText.length} -> ${formatted.length} chars`);
+    } catch (error) {
+      console.error('Error formatting document:', error);
+      // Fallback to original text if formatting fails
+      setFormattedDocumentText(documentText);
+      setIsFormatted(false);
+    } finally {
+      setIsFormatting(false);
+    }
+  }, [documentText]);
+
+  // Get display text based on formatting state
+  const displayText = isFormatted ? formattedDocumentText : documentText;
+  const currentTextLength = displayText.length;
+
   const renderOverviewContent = () => {
     return (
       <div className="space-y-6">
@@ -71,22 +97,49 @@ const OptimizedStudyModule: React.FC<StudyModuleProps> = memo(({ analysis, docum
             </Card>
             
             {/* Full Text section collapsible */}
-            <Card 
-              title={t('dashboard.fullDocumentText') || 'Full Document Text'} 
+            <Card
+              title={t('dashboard.fullDocumentText') || 'Full Document Text'}
               actions={
-                <button 
-                  onClick={() => setShowFullText(!showFullText)}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                >
-                  {showFullText ? t('overview.hideText') || 'Hide' : t('overview.showText') || 'Show'} 
-                  ({documentText.length} chars)
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleFormatDocumentText}
+                    disabled={isFormatting}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors flex items-center gap-1 ${
+                      isFormatted
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    } ${isFormatting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="Format text for better readability"
+                  >
+                    {isFormatting ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    ) : isFormatted ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 9.667A2.667 2.667 0 019.667 7h4.666A2.667 2.667 0 0117 9.667v4.666A2.667 2.667 0 0114.333 17H9.667A2.667 2.667 0 017 14.333V9.667z" />
+                      </svg>
+                    )}
+                    {isFormatting ? 'Formatting...' : isFormatted ? 'Formatted' : 'Format Text'}
+                  </button>
+                  <button
+                    onClick={() => setShowFullText(!showFullText)}
+                    className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                  >
+                    {showFullText ? t('overview.hideText') || 'Hide' : t('overview.showText') || 'Show'}
+                    ({currentTextLength} chars{isFormatted ? ` - formatted` : ''})
+                  </button>
+                </div>
               }
             >
               {showFullText && (
-                <div className="prose prose-zinc dark:prose-invert max-w-none p-4 h-96 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/30 rounded-lg">
-                  {documentText}
-                </div>
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed p-4 h-96 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/30 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-x-auto">
+                  {displayText}
+                </pre>
               )}
             </Card>
           </div>
