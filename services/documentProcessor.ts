@@ -1,5 +1,53 @@
 
 /**
+ * Extracts text from a URL using the urltotext API through backend
+ * @param url The URL to extract content from
+ * @returns Extracted text content
+ */
+const extractTextFromUrlWithExtractor = async (url: string): Promise<string> => {
+  try {
+    // Ensure URL has protocol
+    let formattedUrl = url;
+    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+
+    console.log("Trying backend extraction for URL:", url, "(formatted:", formattedUrl, ")");
+
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/extract-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: formattedUrl })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend extraction failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data || !data.extractedText) {
+      throw new Error("Invalid response from backend extraction API");
+    }
+
+    const extractedText = data.extractedText.trim();
+
+    // Heuristic check: if the extracted text is too short, it might not be useful content
+    if (extractedText.length < 100) {
+      throw new Error("Extracted text too short, not useful content");
+    }
+
+    console.log(`Successfully extracted ${extractedText.length} characters using backend URLTOTEXT API`);
+    return extractedText;
+  } catch (error: any) {
+    console.warn("Backend extractor API failed:", error.message);
+    throw new Error("error.extractorApiFailed");
+  }
+};
+
+/**
  * Extracts text from a PDF file buffer
  * @param arrayBuffer The PDF file buffer
  * @returns Extracted text content
@@ -130,7 +178,17 @@ export const extractTextFromSource = (source: File | string): Promise<string> =>
         reject(error instanceof Error ? error : new Error("error.fileProcessing"));
       }
     } else {
-      // Handle URL
+      // Handle URL - Try extractor API first, then fallback to CORS proxies
+      try {
+        // First try the extractor API
+        const extractedText = await extractTextFromUrlWithExtractor(source);
+        resolve(extractedText);
+        return; // Success with extractor API
+      } catch (extractorError) {
+        console.warn("Extractor API failed, falling back to CORS proxies:", extractorError);
+        // Continue to CORS proxy fallback
+      }
+
       const corsProxies = [
         'https://api.allorigins.win/get?url=',
         'https://thingproxy.freeboard.io/fetch/',

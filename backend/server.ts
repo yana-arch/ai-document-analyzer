@@ -180,6 +180,60 @@ app.get('/api/question_banks', async (req, res) => {
   }
 });
 
+// URL to text extraction endpoint
+app.post('/api/extract-url', async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const axios = await import('axios');
+
+    const apiUrl = "https://urltotext.com/api/v1/urltotext/";
+    const headers = {
+      "Authorization": `Token ${process.env.URLTOTEXT_API_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    // Form data as URL-encoded string
+    const payloadData = new URLSearchParams({
+      "url": url,
+      "output_format": "text",
+      "extract_main_content": "false",
+      "render_javascript": "false",
+      "residential_proxy": "false",
+      "stealth_proxy": "false"
+    }).toString();
+
+    const response = await axios.default.post(apiUrl, payloadData, {
+      headers,
+      timeout: 60000
+    });
+
+    console.log("URLTOTEXT API response status:", response.status);
+
+    // Parse response and extract content
+    const data = response.data;
+    if (data && data.data && data.data.content) {
+      res.json({
+        extractedText: data.data.content.trim(),
+        title: data.data.page_title,
+        url: data.data.url
+      });
+    } else {
+      throw new Error('Invalid response format from URLTOTEXT API');
+    }
+  } catch (error: any) {
+    console.error('URLTOTEXT API error:', error.response?.status, error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to extract text from URL',
+      details: error.response?.data || error.message
+    });
+  }
+});
+
 // Database info endpoint
 app.get('/api/db/info', async (req, res) => {
   try {
